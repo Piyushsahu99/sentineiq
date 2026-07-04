@@ -1,118 +1,90 @@
-# SentinelQ — Implementation Plan
+# SentinelQ → Real Backend (Lovable Cloud + Supabase + Gemini)
 
-A premium, dark-mode, glassmorphic enterprise cybersecurity platform for banks. Built entirely as a polished frontend prototype with rich mock data (no backend/auth persistence unless you ask). Every screen from your spec will be built.
+Move SentinelQ from a mock-data prototype to a live, Supabase-powered app with real auth, realtime updates, an AI Copilot backed by Gemini, and a working Correlation Engine. Frontend stays as-is visually; data layer swaps from `src/lib/mock/data.ts` to Supabase queries.
 
-## Scope decisions (defaults — tell me to change any)
+## Phase 0 — Enable backend
 
-- **No Lovable Cloud / real auth.** Login, SSO, MFA, forgot-password, and role selection are UI flows with mock validation. Selected role is stored in `localStorage` and drives sidebar/dashboards. Say the word and I'll wire real auth + Postgres.
-- **No real AI backend.** The AI Copilot and AI Investigation pages use scripted, realistic mock responses with typing/streaming animation. Can be upgraded to Lovable AI Gateway later.
-- **All data is mock** (generated with seeded randomness so charts/tables feel real and consistent across reloads).
-- **Desktop-first**, responsive down to tablet. Mobile is usable but not the focus.
-- **Charts:** Recharts. **Graph:** react-force-graph-2d. **Map:** react-simple-maps (world topojson). **Animations:** framer-motion. **Icons:** lucide-react. **Command palette:** `cmdk` (already via shadcn).
+- Enable **Lovable Cloud** (Supabase under the hood: DB, Auth, Realtime, Storage, Edge/server functions).
+- Enable **Lovable AI Gateway** for Gemini calls (no API key handling for you).
 
-## Design system
+## Phase 1 — Auth (replace localStorage session)
 
-- Dark-by-default theme in `src/styles.css` using OKLCH tokens: deep navy background (`#0a0f1e`-ish), elevated glass surfaces with `backdrop-blur`, hairline borders (`white/8`), electric blue (`#3b82f6`), cyan (`#22d3ee`), violet (`#8b5cf6`) accents, plus semantic risk tokens (`--risk-critical/high/medium/low/info`).
-- Typography: Inter (body) + JetBrains Mono (numbers/telemetry), loaded via `<link>` in `__root.tsx`.
-- Gradients: subtle radial/linear gradients on hero cards, glow rings on KPI numbers, animated grid background on auth pages.
-- Reusable primitives: `GlassCard`, `KpiCard` (animated count-up), `RiskBadge`, `ThreatBadge`, `SeverityDot`, `Sparkline`, `ProgressRing`, `Heatmap`, `Timeline`, `DataTable` (sortable/filterable), `SectionHeader`, `EmptyState`, `Skeleton` variants, `Shimmer`.
-- Micro-interactions: hover lift, gradient border on focus, framer `AnimatePresence` page transitions, staggered card entrance.
+- Supabase Auth: email + password, plus Google sign-in.
+- `profiles` table (id → auth.users, display_name, email).
+- Roles via separate `user_roles` table + `app_role` enum (`soc_analyst`, `fraud_analyst`, `risk_manager`, `executive`) + `has_role()` security-definer function.
+- Auto-create profile on signup via trigger; first user optionally promoted to `executive` for demo.
+- Rewire `/auth/login`, `/auth/mfa` (kept as UI-only OTP step, optional), `/auth/role-select` (writes role via server fn), and `_app` guard to real session — remove `sq_auth` / `sq_mfa` / `sq_role` localStorage.
+- Add `/reset-password` route.
 
-## Route architecture (TanStack Start)
+## Phase 2 — Database schema
 
-```
-src/routes/
-  __root.tsx                  # dark theme, fonts, HeadContent, global providers
-  index.tsx                   # redirects to /auth/login or /dashboard based on mock session
-  auth/
-    login.tsx                 # email+password, SSO buttons (Okta/Azure/Google), "Continue"
-    mfa.tsx                   # 6-digit OTP UI + trust-device
-    forgot-password.tsx
-    role-select.tsx           # SOC / Fraud / Risk / Executive cards
-  _app.tsx                    # authenticated layout: sidebar + topbar + Copilot dock + <Outlet/>
-  _app/
-    dashboard.tsx             # Executive Security Dashboard
-    correlation.tsx           # Correlation Engine (flagship)
-    correlation.$caseId.tsx   # deep-link into a specific correlated case
-    investigations.tsx        # list
-    investigations.$id.tsx    # AI Investigation report
-    transactions.tsx
-    telemetry.tsx             # Firewall/VPN/IAM/Endpoint/Email/Cloud/DNS/Auth tabs
-    threat-intel.tsx
-    quantum.tsx
-    behavior.tsx              # customer list -> profile
-    behavior.$customerId.tsx
-    explainable-ai.tsx
-    graph.tsx                 # knowledge graph
-    alerts.tsx
-    reports.tsx
-    settings.tsx              # tabs: Roles / Notifications / API / SIEM / Feeds / Quantum policy
-```
+Normalized tables in `public`, all with GRANTs + RLS + policies:
 
-Global overlays mounted in `_app.tsx`: `CommandPalette` (⌘K), `NotificationCenter` (slide-over), `CopilotDock` (floating button → side panel with streaming chat).
+`customers, accounts, devices, sessions, transactions, beneficiaries, cyber_telemetry, threat_intel, iocs, alerts, ai_investigations, risk_scores, quantum_assets, reports, knowledge_edges, notifications`.
 
-## Page-by-page contents
+- FKs, indexes on hot columns (customer_id, created_at, risk_score, severity).
+- RLS: analyst/executive roles can `SELECT` operational tables via `has_role()`; only service_role writes for ingestion tables. Users can read their own `profiles`.
+- Seed migration inserts a realistic demo dataset (customers, 500 transactions, telemetry, threat intel, one full correlated incident) so the dashboard is populated on first login.
 
-**Auth flows** — animated grid + aurora background, SentinelQ logo mark, glass card. Login → MFA → Role Select → `/dashboard`. Forgot-password shows success state.
+## Phase 3 — Realtime dashboards
 
-**Executive Dashboard** — 7 animated KPI cards (Total Threats, Critical, Fraud Prevented $, Tx Monitored, Avg Risk, FP Reduction %, Quantum Readiness ring). Grid below: Live Threat Timeline (streaming feed), Risk Distribution (donut), Threat Heatmap (7×24 hours), Top Attack Categories (horizontal bars), Fraud Trends (area chart), Transaction Monitoring (live sparkline + counters), Live Security Feed (auto-scrolling), Recent AI Investigations / Alerts / Blocked Transactions (three compact lists).
+- Subscribe to `transactions`, `alerts`, `risk_scores`, `ai_investigations`, `notifications` via `supabase.channel(...).on('postgres_changes', ...)`.
+- Dashboard KPIs, Live Threat Timeline, Alert Center, Risk charts, Correlation feed all update without refresh.
+- Replace every `src/lib/mock/data.ts` consumer with TanStack Query + Supabase; keep the mock module only as a seed helper (or delete).
 
-**Correlation Engine** — top summary strip (Correlation Score gauge, Attack Type, Confidence, Business Impact $, Fraud Prob %, Cyber Threat Prob %). Center: vertical connected timeline of the exact 9 events you listed, each a clickable node with severity glow. Right rail: detail panel for selected node (timestamp, source, risk contribution %, evidence JSON, confidence bar). Bottom: "Final AI Decision" card with recommended actions and one-click "Open Investigation".
+## Phase 4 — Correlation Engine (server function)
 
-**AI Investigation** — hero with Attack Summary + AI Confidence ring. Sections: Root Cause, Evidence (log snippets), Risk Factors (chips), Timeline (mini), Recommended Actions (checklist). Expandable accordions: Technical Details, Business Summary, Compliance Notes (PSD2/GDPR/PCI-DSS/NIS2 tags). "Download PDF" uses `jspdf` + `html2canvas` to export the current report.
+- `createServerFn` `correlateTransaction({ transactionId })`:
+  1. Load transaction + customer baseline, recent sessions, device fingerprint, geo, telemetry in the last 24h, matching IOCs, recent alerts.
+  2. Compute weighted composite risk score (0–100) with named contributors (device change, geo anomaly, velocity, IOC hit, off-hours, amount z-score, telemetry severity).
+  3. Insert into `risk_scores`, insert `ai_investigations` row (root cause, evidence JSON, recommended actions), insert `alert` if score ≥ 80, insert `knowledge_edges` for entities touched, insert `notifications`.
+- Postgres trigger on `INSERT INTO transactions` → calls a server route `/api/public/hooks/tx-correlate` (signed with `CORRELATION_SECRET`) that invokes the server fn. Alternative: call the server fn directly from the client after insert (simpler for hackathon).
 
-**Transaction Analytics** — filter bar (search, risk slider, amount range, country multi-select, device, payment method, date). Rich DataTable with row risk bar, country flag, device icon, status pill. Side charts: Transaction Timeline, Behaviour Comparison (radar: current vs baseline), Suspicious tab, Blocked tab.
+## Phase 5 — AI Copilot (Gemini via Lovable AI Gateway)
 
-**Cybersecurity Telemetry** — tabbed view (Firewall / VPN / IAM / Endpoint / Email / Cloud / DNS / Auth). Each tab: live-updating table with Severity, Source, Timestamp, User, Device, Risk Score, plus a small trend chart at top.
+- `createServerFn` `askCopilot({ prompt, contextIds })` with `requireSupabaseAuth`.
+- Server fn pulls live rows (recent txns, alerts, target investigation), builds a compact context, calls Gemini `gemini-2.5-flash` through the AI Gateway, streams the answer.
+- Suggestion chips map to canned intents but responses are real LLM output grounded in live data.
 
-**Threat Intelligence** — Global Threat Map (world map with pulsing dots per origin country), Known Malicious IPs table, Threat Campaigns cards, Malware Families grid, MITRE ATT&CK matrix (tactics × techniques, highlighted cells), IOCs table, live Threat Feed.
+## Phase 6 — Reports
 
-**Quantum Risk** — Quantum Readiness Meter (large ring, 0–100), Cryptographic Asset Inventory table (TLS versions, RSA, ECC, legacy), HNDL Exposure card ($ value of long-term sensitive data at risk), Migration Priority list, Recommended Migration Strategy (PQC algorithm suggestions: Kyber/Dilithium/Falcon), Timeline for Quantum Readiness (Gantt-style).
+- Report definitions in `reports` table; server fn assembles data → returns structured JSON → client renders with existing PDF export (`jspdf`/`html2canvas`).
+- SOC, Fraud, Executive, Compliance variants, all from live data.
 
-**Customer Behaviour** — searchable customer list → profile page: typical login map, trusted devices, transaction behaviour (avg amount, active hours heatmap), Risk Trend line, Behaviour Timeline, Behaviour Change Detection callouts.
+## Phase 7 — Quantum module
 
-**Explainable AI** — decision picker at top. Displays Risk Score + Confidence rings, Positive/Negative Factor columns, Feature Importance bar chart, SHAP-style contribution cards (each feature with direction arrow and magnitude), natural-language explanation paragraph, Recommended Actions.
+- `quantum_assets` table (asset, algo, key_size, tls_version, expires_at, migration_status, sensitivity).
+- Readiness score = weighted % of assets on PQC-ready algorithms; HNDL exposure = Σ sensitivity of long-lived RSA/ECC assets.
+- Charts/tables read live rows; “Migrate” action updates status.
 
-**Knowledge Graph** — full-viewport force-directed graph with node types (Customer, Account, Device, IP, Transaction, Merchant, Threat Actor, Malware, Location, VPN) colored by type. Click node → highlights connected subgraph + side panel with entity details and related alerts. Legend + node-type filter chips.
+## Phase 8 — Knowledge Graph
 
-**AI Copilot** — floating bottom-right button. Opens right-side panel with conversation UI, suggestion chips ("Why was this blocked?", "Summarize this attack", "Show attack timeline", "Recommend actions", "Explain to executives", "Generate incident report"). Responses are pre-scripted per intent, streamed with a shimmer effect; can render inline mini-timelines or bullet actions.
+- `knowledge_edges(src_type, src_id, dst_type, dst_id, weight, created_at)` populated by Correlation Engine.
+- Replace SVG mock graph with **react-force-graph-2d** (already planned) reading edges live; realtime subscribe for new edges.
 
-**Alert Center** — Kanban-ish tabs (Critical / Medium / Low / Acknowledged / Resolved), each alert card shows severity, source, assignee avatar, SLA countdown. Detail drawer: Assign Analyst dropdown, Status Timeline, Add Note.
+## Phase 9 — Alerts
 
-**Reports** — cards for SOC / Fraud / Executive / Compliance. Clicking opens a PDF-styled preview (rendered HTML) + Download button (jspdf).
+- Trigger already created in Phase 4. Alert Center reads `alerts` live; analyst can acknowledge / assign / resolve — updates gated by RLS (analyst roles only). Realtime badge on topbar via `notifications`.
 
-**Settings** — tabs for User Roles (table + role permissions matrix), Notification Preferences (channel toggles), API Integrations (API keys mock, generate/rotate), SIEM Integrations (Splunk/Sentinel/QRadar/Elastic connectors), Threat Feed Settings (feed list with enable toggle), Quantum Policy Settings (min TLS version, deprecate RSA date, PQC target date).
+## Phase 10 — Cleanup
 
-## Global UX
+- Delete `src/lib/mock/data.ts` and every import.
+- Confirm no route reads from localStorage for data.
+- Loading skeletons + `errorComponent` / `notFoundComponent` on every route with a loader.
 
-- ⌘K command palette: jump to any page, search alerts/customers/transactions.
-- Notification center: unread badge, grouped by severity.
-- Framer-motion route transitions (fade+slide 200ms).
-- Skeleton loaders on every data surface (first paint) — visible for ~400ms to feel real.
-- Keyboard shortcuts: `?` shows shortcut sheet; `g d` → dashboard, `g c` → correlation, etc.
-- Accessible: focus rings, aria labels on icon-only buttons, prefers-reduced-motion respected.
+## Technical Details
 
-## Dependencies to add
+- Stack stays TanStack Start; all server logic uses `createServerFn` (or `/api/public/*` route for the DB webhook). No FastAPI, no Supabase Edge Functions unless a DB trigger truly needs one.
+- Clients: browser `@/integrations/supabase/client` for reads/subscriptions; `requireSupabaseAuth` for user-scoped server fns; `supabaseAdmin` only inside the correlation route (verified via secret).
+- Public routes (`/`, `/auth/*`) stay SSR; the entire app shell moves under `src/routes/_authenticated/` (integration-managed layout) — the current `_app.tsx` `beforeLoad` localStorage check is removed.
+- Realtime enabled per table via `alter publication supabase_realtime add table ...`.
+- Secrets needed: `CORRELATION_SECRET` (generated) if we wire the DB-trigger webhook.
 
-`framer-motion`, `recharts`, `react-force-graph-2d`, `react-simple-maps`, `d3-scale`, `d3-geo`, `topojson-client`, `world-atlas`, `jspdf`, `html2canvas`, `date-fns`, `@faker-js/faker` (seeded, dev-time mock generator kept out of prod bundle by using it in a build-time module or lightweight custom generator — I'll use a small custom seeded generator to avoid bundle bloat).
+## Out of scope (say the word to add)
 
-## Delivery order (single build)
+- Real MFA (kept as UI step or removed).
+- SSO (Okta/Azure/Ping) — Google only for now.
+- SIEM ingestion connectors — telemetry stays synthetic/seeded.
+- Actual PDF templating polish beyond current export.
 
-1. Theme tokens + fonts + `__root.tsx` + auth pages.
-2. `_app` shell: sidebar, topbar, notifications, copilot dock, command palette.
-3. Mock data layer (`src/lib/mock/*`): threats, transactions, telemetry, customers, graph, quantum inventory, alerts.
-4. Executive Dashboard.
-5. Correlation Engine (flagship polish pass).
-6. AI Investigation + PDF export.
-7. Transactions, Telemetry, Threat Intel (+ map), Quantum.
-8. Behavior, Explainable AI, Knowledge Graph.
-9. Alerts, Reports, Settings.
-10. Copilot scripted responses + shortcuts + empty/loading polish pass.
-
-## Out of scope (this plan)
-
-- Real authentication, real database, real streaming from SIEMs.
-- Real LLM calls for Copilot/Investigations.
-- Mobile-first optimization beyond "usable".
-
-Approve and I'll build it end-to-end. If you want real auth + AI wired in, say so before approving and I'll add Lovable Cloud + Lovable AI Gateway to the plan.
+Approve and I'll execute Phase 0 → 10 in order. Say if you'd rather skip MFA UI entirely or want the DB-trigger webhook path over client-invoked correlation.
