@@ -9,38 +9,281 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRoleSelectRouteImport } from './routes/auth.role-select'
+import { Route as AuthMfaRouteImport } from './routes/auth.mfa'
+import { Route as AuthLoginRouteImport } from './routes/auth.login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
+import { Route as AppTransactionsRouteImport } from './routes/_app.transactions'
+import { Route as AppThreatIntelRouteImport } from './routes/_app.threat-intel'
+import { Route as AppTelemetryRouteImport } from './routes/_app.telemetry'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppReportsRouteImport } from './routes/_app.reports'
+import { Route as AppQuantumRouteImport } from './routes/_app.quantum'
+import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
+import { Route as AppGraphRouteImport } from './routes/_app.graph'
+import { Route as AppExplainableAiRouteImport } from './routes/_app.explainable-ai'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCorrelationRouteImport } from './routes/_app.correlation'
+import { Route as AppBehaviorRouteImport } from './routes/_app.behavior'
+import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoleSelectRoute = AuthRoleSelectRouteImport.update({
+  id: '/role-select',
+  path: '/role-select',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthMfaRoute = AuthMfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AppTransactionsRoute = AppTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppThreatIntelRoute = AppThreatIntelRouteImport.update({
+  id: '/threat-intel',
+  path: '/threat-intel',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTelemetryRoute = AppTelemetryRouteImport.update({
+  id: '/telemetry',
+  path: '/telemetry',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuantumRoute = AppQuantumRouteImport.update({
+  id: '/quantum',
+  path: '/quantum',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvestigationsRoute = AppInvestigationsRouteImport.update({
+  id: '/investigations',
+  path: '/investigations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGraphRoute = AppGraphRouteImport.update({
+  id: '/graph',
+  path: '/graph',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExplainableAiRoute = AppExplainableAiRouteImport.update({
+  id: '/explainable-ai',
+  path: '/explainable-ai',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCorrelationRoute = AppCorrelationRouteImport.update({
+  id: '/correlation',
+  path: '/correlation',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBehaviorRoute = AppBehaviorRouteImport.update({
+  id: '/behavior',
+  path: '/behavior',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAlertsRoute = AppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteWithChildren
+  '/alerts': typeof AppAlertsRoute
+  '/behavior': typeof AppBehaviorRoute
+  '/correlation': typeof AppCorrelationRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/explainable-ai': typeof AppExplainableAiRoute
+  '/graph': typeof AppGraphRoute
+  '/investigations': typeof AppInvestigationsRoute
+  '/quantum': typeof AppQuantumRoute
+  '/reports': typeof AppReportsRoute
+  '/settings': typeof AppSettingsRoute
+  '/telemetry': typeof AppTelemetryRoute
+  '/threat-intel': typeof AppThreatIntelRoute
+  '/transactions': typeof AppTransactionsRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/mfa': typeof AuthMfaRoute
+  '/auth/role-select': typeof AuthRoleSelectRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteWithChildren
+  '/alerts': typeof AppAlertsRoute
+  '/behavior': typeof AppBehaviorRoute
+  '/correlation': typeof AppCorrelationRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/explainable-ai': typeof AppExplainableAiRoute
+  '/graph': typeof AppGraphRoute
+  '/investigations': typeof AppInvestigationsRoute
+  '/quantum': typeof AppQuantumRoute
+  '/reports': typeof AppReportsRoute
+  '/settings': typeof AppSettingsRoute
+  '/telemetry': typeof AppTelemetryRoute
+  '/threat-intel': typeof AppThreatIntelRoute
+  '/transactions': typeof AppTransactionsRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/mfa': typeof AuthMfaRoute
+  '/auth/role-select': typeof AuthRoleSelectRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRouteWithChildren
+  '/_app/alerts': typeof AppAlertsRoute
+  '/_app/behavior': typeof AppBehaviorRoute
+  '/_app/correlation': typeof AppCorrelationRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/explainable-ai': typeof AppExplainableAiRoute
+  '/_app/graph': typeof AppGraphRoute
+  '/_app/investigations': typeof AppInvestigationsRoute
+  '/_app/quantum': typeof AppQuantumRoute
+  '/_app/reports': typeof AppReportsRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/telemetry': typeof AppTelemetryRoute
+  '/_app/threat-intel': typeof AppThreatIntelRoute
+  '/_app/transactions': typeof AppTransactionsRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/mfa': typeof AuthMfaRoute
+  '/auth/role-select': typeof AuthRoleSelectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/alerts'
+    | '/behavior'
+    | '/correlation'
+    | '/dashboard'
+    | '/explainable-ai'
+    | '/graph'
+    | '/investigations'
+    | '/quantum'
+    | '/reports'
+    | '/settings'
+    | '/telemetry'
+    | '/threat-intel'
+    | '/transactions'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/mfa'
+    | '/auth/role-select'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/alerts'
+    | '/behavior'
+    | '/correlation'
+    | '/dashboard'
+    | '/explainable-ai'
+    | '/graph'
+    | '/investigations'
+    | '/quantum'
+    | '/reports'
+    | '/settings'
+    | '/telemetry'
+    | '/threat-intel'
+    | '/transactions'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/mfa'
+    | '/auth/role-select'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/auth'
+    | '/_app/alerts'
+    | '/_app/behavior'
+    | '/_app/correlation'
+    | '/_app/dashboard'
+    | '/_app/explainable-ai'
+    | '/_app/graph'
+    | '/_app/investigations'
+    | '/_app/quantum'
+    | '/_app/reports'
+    | '/_app/settings'
+    | '/_app/telemetry'
+    | '/_app/threat-intel'
+    | '/_app/transactions'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/mfa'
+    | '/auth/role-select'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +291,183 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/role-select': {
+      id: '/auth/role-select'
+      path: '/role-select'
+      fullPath: '/auth/role-select'
+      preLoaderRoute: typeof AuthRoleSelectRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/mfa': {
+      id: '/auth/mfa'
+      path: '/mfa'
+      fullPath: '/auth/mfa'
+      preLoaderRoute: typeof AuthMfaRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_app/transactions': {
+      id: '/_app/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof AppTransactionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/threat-intel': {
+      id: '/_app/threat-intel'
+      path: '/threat-intel'
+      fullPath: '/threat-intel'
+      preLoaderRoute: typeof AppThreatIntelRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/telemetry': {
+      id: '/_app/telemetry'
+      path: '/telemetry'
+      fullPath: '/telemetry'
+      preLoaderRoute: typeof AppTelemetryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quantum': {
+      id: '/_app/quantum'
+      path: '/quantum'
+      fullPath: '/quantum'
+      preLoaderRoute: typeof AppQuantumRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/investigations': {
+      id: '/_app/investigations'
+      path: '/investigations'
+      fullPath: '/investigations'
+      preLoaderRoute: typeof AppInvestigationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/graph': {
+      id: '/_app/graph'
+      path: '/graph'
+      fullPath: '/graph'
+      preLoaderRoute: typeof AppGraphRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/explainable-ai': {
+      id: '/_app/explainable-ai'
+      path: '/explainable-ai'
+      fullPath: '/explainable-ai'
+      preLoaderRoute: typeof AppExplainableAiRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/correlation': {
+      id: '/_app/correlation'
+      path: '/correlation'
+      fullPath: '/correlation'
+      preLoaderRoute: typeof AppCorrelationRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/behavior': {
+      id: '/_app/behavior'
+      path: '/behavior'
+      fullPath: '/behavior'
+      preLoaderRoute: typeof AppBehaviorRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/alerts': {
+      id: '/_app/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AppAlertsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAlertsRoute: typeof AppAlertsRoute
+  AppBehaviorRoute: typeof AppBehaviorRoute
+  AppCorrelationRoute: typeof AppCorrelationRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppExplainableAiRoute: typeof AppExplainableAiRoute
+  AppGraphRoute: typeof AppGraphRoute
+  AppInvestigationsRoute: typeof AppInvestigationsRoute
+  AppQuantumRoute: typeof AppQuantumRoute
+  AppReportsRoute: typeof AppReportsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppTelemetryRoute: typeof AppTelemetryRoute
+  AppThreatIntelRoute: typeof AppThreatIntelRoute
+  AppTransactionsRoute: typeof AppTransactionsRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAlertsRoute: AppAlertsRoute,
+  AppBehaviorRoute: AppBehaviorRoute,
+  AppCorrelationRoute: AppCorrelationRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppExplainableAiRoute: AppExplainableAiRoute,
+  AppGraphRoute: AppGraphRoute,
+  AppInvestigationsRoute: AppInvestigationsRoute,
+  AppQuantumRoute: AppQuantumRoute,
+  AppReportsRoute: AppReportsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppTelemetryRoute: AppTelemetryRoute,
+  AppThreatIntelRoute: AppThreatIntelRoute,
+  AppTransactionsRoute: AppTransactionsRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+interface AuthRouteChildren {
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthMfaRoute: typeof AuthMfaRoute
+  AuthRoleSelectRoute: typeof AuthRoleSelectRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthMfaRoute: AuthMfaRoute,
+  AuthRoleSelectRoute: AuthRoleSelectRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  AuthRoute: AuthRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
