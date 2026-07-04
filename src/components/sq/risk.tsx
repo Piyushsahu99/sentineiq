@@ -11,7 +11,7 @@ export function SeverityDot({ severity, pulse = false, className }: { severity: 
   );
 }
 
-export function RiskBadge({ severity, label, className }: { severity: Severity; label?: string; className?: string }) {
+export function RiskBadge({ severity, label, className }: { severity: Severity; label?: React.ReactNode; className?: string }) {
   return (
     <span
       className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider hairline", className)}
