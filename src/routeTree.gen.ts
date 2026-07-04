@@ -26,6 +26,7 @@ import { Route as AppExplainableAiRouteImport } from './routes/_app.explainable-
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCorrelationRouteImport } from './routes/_app.correlation'
 import { Route as AppBehaviorRouteImport } from './routes/_app.behavior'
+import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -111,10 +112,16 @@ const AppBehaviorRoute = AppBehaviorRouteImport.update({
   path: '/behavior',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAlertsRoute = AppAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/alerts': typeof AppAlertsRoute
   '/behavior': typeof AppBehaviorRoute
   '/correlation': typeof AppCorrelationRoute
   '/dashboard': typeof AppDashboardRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/alerts': typeof AppAlertsRoute
   '/behavior': typeof AppBehaviorRoute
   '/correlation': typeof AppCorrelationRoute
   '/dashboard': typeof AppDashboardRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/_app/alerts': typeof AppAlertsRoute
   '/_app/behavior': typeof AppBehaviorRoute
   '/_app/correlation': typeof AppCorrelationRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/alerts'
     | '/behavior'
     | '/correlation'
     | '/dashboard'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/alerts'
     | '/behavior'
     | '/correlation'
     | '/dashboard'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/alerts'
     | '/_app/behavior'
     | '/_app/correlation'
     | '/_app/dashboard'
@@ -353,10 +365,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBehaviorRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/alerts': {
+      id: '/_app/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AppAlertsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAlertsRoute: typeof AppAlertsRoute
   AppBehaviorRoute: typeof AppBehaviorRoute
   AppCorrelationRoute: typeof AppCorrelationRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -370,6 +390,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAlertsRoute: AppAlertsRoute,
   AppBehaviorRoute: AppBehaviorRoute,
   AppCorrelationRoute: AppCorrelationRoute,
   AppDashboardRoute: AppDashboardRoute,
