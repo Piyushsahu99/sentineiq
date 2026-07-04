@@ -42,7 +42,7 @@ if (typeof window !== "undefined") {
 export const session = {
   getEmail(): string { return cachedEmail ?? "analyst@sentinelq.io"; },
   getRole(): Role | null { return cachedRole; },
-  subscribe(fn: () => void) { listeners.add(fn); return () => listeners.delete(fn); },
+  subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
   refresh: refreshCache,
   async signOut() { await supabase.auth.signOut(); cachedEmail = null; cachedRole = null; listeners.forEach((l) => l()); },
 };
