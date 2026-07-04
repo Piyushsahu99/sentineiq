@@ -22,7 +22,23 @@ const sev = (r: number): Sev => r >= 80 ? "critical" : r >= 60 ? "high" : r >= 4
 function TxPage() {
   const { data: txs = [] } = useTransactions(60);
   const correlate = useServerFn(correlateTransaction);
+  const seed = useServerFn(seedDeterministic);
   const [busy, setBusy] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  async function seedHighRisk() {
+    setSeeding(true);
+    try {
+      const res = await seed({ data: { scenario: "high_risk" } });
+      const target = res.transactions?.[0];
+      if (!target) throw new Error("Seed returned no transaction");
+      toast.success(`Seeded deterministic scenario · correlating tx…`);
+      const c = await correlate({ data: { transactionId: target.id } });
+      toast.success(`Deterministic run: composite ${c.composite} (expected ${res.expected_high_risk_composite})`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Seed failed");
+    } finally { setSeeding(false); }
+  }
 
   async function simulate() {
     setBusy(true);
