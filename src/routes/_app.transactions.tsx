@@ -1,145 +1,116 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
 import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card";
-import { RiskBadge, RiskBar } from "@/components/sq/risk";
-import { transactions } from "@/lib/mock/data";
-import { Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis, ResponsiveContainer, AreaChart, Area, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
-import { Filter, Search, Ban, AlertTriangle } from "lucide-react";
+import { RiskBar, RiskBadge } from "@/components/sq/risk";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
+import { useTransactions } from "@/lib/live-queries";
+import { supabase } from "@/integrations/supabase/client";
+import { correlateTransaction } from "@/lib/correlation.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/transactions")({
-  component: TransactionsPage,
+  ssr: false,
+  component: TxPage,
 });
 
-const tooltipStyle = { background: "rgba(20,25,45,0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, fontSize: 12 } as const;
+type Sev = "critical" | "high" | "medium" | "low" | "info";
+const sev = (r: number): Sev => r >= 80 ? "critical" : r >= 60 ? "high" : r >= 40 ? "medium" : r >= 20 ? "low" : "info";
 
-const behaviour = [
-  { k: "Amount", cur: 88, avg: 22 },
-  { k: "Velocity", cur: 71, avg: 30 },
-  { k: "Geo", cur: 92, avg: 12 },
-  { k: "Device", cur: 78, avg: 18 },
-  { k: "Beneficiary", cur: 95, avg: 20 },
-  { k: "Time", cur: 40, avg: 35 },
-];
+function TxPage() {
+  const { data: txs = [] } = useTransactions(60);
+  const correlate = useServerFn(correlateTransaction);
+  const [busy, setBusy] = useState(false);
 
-function TransactionsPage() {
-  const [q, setQ] = useState("");
-  const [minRisk, setMinRisk] = useState(0);
-  const [tab, setTab] = useState<"all"|"suspicious"|"blocked">("all");
+  async function simulate() {
+    setBusy(true);
+    try {
+      const { data: cust } = await supabase.from("customers").select("id").limit(1).maybeSingle();
+      if (!cust) { toast.error("No customer seeded"); return; }
+      const amount = Math.round(20000 + Math.random() * 30000);
+      const country = ["RU", "NG", "AE"][Math.floor(Math.random() * 3)];
+      const { data: inserted, error } = await supabase.from("transactions").insert({
+        customer_id: cust.id, amount, currency: "USD",
+        channel: Math.random() > 0.5 ? "wire" : "crypto",
+        merchant: "Unknown beneficiary",
+        country, status: "pending",
+      }).select("id").single();
+      if (error || !inserted) throw error ?? new Error("Insert failed");
+      toast.success(`Transaction inserted, correlating…`);
+      const res = await correlate({ data: { transactionId: inserted.id } });
+      toast.success(`Correlation done: risk ${res.composite}${res.blocked ? " — BLOCKED" : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Simulation failed");
+    } finally { setBusy(false); }
+  }
 
-  const filtered = useMemo(() => transactions.filter((t) => {
-    if (tab === "suspicious" && t.status !== "flagged") return false;
-    if (tab === "blocked" && t.status !== "blocked") return false;
-    if (t.risk < minRisk) return false;
-    if (q && ![t.id, t.merchant, t.country, t.customer].join(" ").toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  }), [q, minRisk, tab]);
-
-  const timeline = useMemo(() => {
-    const buckets: { t: string; v: number }[] = [];
-    for (let i = 23; i >= 0; i--) {
-      buckets.push({ t: `${String(i).padStart(2,"0")}:00`, v: Math.round(1200 + Math.random()*1800) });
-    }
-    return buckets;
-  }, []);
+  const totalUsd = txs.reduce((s, t) => s + Number(t.amount), 0);
+  const flagged = txs.filter((t) => (t.risk_score ?? 0) >= 60).length;
+  const blocked = txs.filter((t) => t.status === "blocked").length;
 
   return (
     <div>
       <PageHeader
         title="Transaction Analytics"
-        subtitle="Every payment, scored, contextualised, and correlated with cyber telemetry."
-        actions={<button className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:brightness-110">Export CSV</button>}
+        subtitle="Live transactions from Supabase — insert one below and watch the Correlation Engine score it in real time."
+        actions={
+          <button disabled={busy} onClick={simulate} className="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold hover:brightness-110 disabled:opacity-60">
+            {busy ? "Correlating…" : "Simulate suspicious transaction"}
+          </button>
+        }
       />
 
-      <div className="grid grid-cols-12 gap-6 mb-6">
-        <GlassCard className="col-span-12 lg:col-span-8">
-          <SectionHeader title="Transaction Timeline" description="Volume per hour · last 24h" />
-          <div className="h-52">
-            <ResponsiveContainer>
-              <AreaChart data={timeline}>
-                <defs>
-                  <linearGradient id="tx-g" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--cyber-cyan)" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="var(--cyber-cyan)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="t" tick={{ fill: "hsl(220 10% 60%)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "hsl(220 10% 60%)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="v" stroke="var(--cyber-cyan)" strokeWidth={2} fill="url(#tx-g)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="col-span-12 lg:col-span-4">
-          <SectionHeader title="Behaviour Comparison" description="Current transaction vs 90-day baseline" />
-          <div className="h-52">
-            <ResponsiveContainer>
-              <RadarChart data={behaviour}>
-                <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                <PolarAngleAxis dataKey="k" tick={{ fill: "hsl(220 10% 65%)", fontSize: 10 }} />
-                <PolarRadiusAxis stroke="rgba(255,255,255,0.05)" tick={{ fill: "hsl(220 10% 40%)", fontSize: 9 }} />
-                <Radar name="Baseline" dataKey="avg" stroke="var(--cyber-cyan)" fill="var(--cyber-cyan)" fillOpacity={0.1} />
-                <Radar name="Current" dataKey="cur" stroke="var(--risk-critical)" fill="var(--risk-critical)" fillOpacity={0.25} />
-                <Tooltip contentStyle={tooltipStyle} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </GlassCard>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Total volume" value={`$${totalUsd.toLocaleString()}`} />
+        <StatCard label="Transactions" value={txs.length.toString()} />
+        <StatCard label="Flagged" value={flagged.toString()} accent="text-amber-300" />
+        <StatCard label="Blocked" value={blocked.toString()} accent="text-rose-300" />
       </div>
 
-      <GlassCard className="p-0">
-        <div className="p-4 flex flex-wrap items-center gap-3 border-b border-white/6">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search TX ID, merchant, country, customer…" className="w-full bg-white/5 hairline rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-cyan-400/40" />
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Filter className="h-3.5 w-3.5" /> Min risk
-            <input type="range" min={0} max={99} value={minRisk} onChange={(e) => setMinRisk(Number(e.target.value))} className="accent-cyan-400" />
-            <span className="font-mono w-6 text-right">{minRisk}</span>
-          </div>
-          <div className="flex rounded-lg hairline p-0.5 text-xs">
-            {(["all","suspicious","blocked"] as const).map((k) => (
-              <button key={k} onClick={() => setTab(k)} className={`px-3 py-1 rounded-md capitalize ${tab === k ? "bg-white/10 text-foreground" : "text-muted-foreground"}`}>{k}</button>
-            ))}
-          </div>
-        </div>
-        <div className="overflow-x-auto scrollbar-thin">
+      <GlassCard>
+        <SectionHeader title="Recent transactions" description="Ordered by newest first · realtime updates via Supabase" />
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              <tr className="[&>th]:text-left [&>th]:font-medium [&>th]:px-4 [&>th]:py-2">
-                <th>ID</th><th>Time</th><th>Amount</th><th>Country</th><th>Device</th><th>Method</th><th>Merchant</th><th>Risk</th><th>Status</th>
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-white/6">
+                <th className="text-left py-2">Time</th>
+                <th className="text-left">Amount</th>
+                <th className="text-left">Channel</th>
+                <th className="text-left">Merchant</th>
+                <th className="text-left">Country</th>
+                <th className="text-left">Status</th>
+                <th className="text-left">Risk</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.slice(0, 40).map((t) => (
-                <tr key={t.id} className="border-t border-white/4 hover:bg-white/3">
-                  <td className="px-4 py-2.5 font-mono text-xs">{t.id}</td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{formatDistanceToNow(t.ts, { addSuffix: true })}</td>
-                  <td className="px-4 py-2.5 font-mono">{t.currency} {t.amount.toLocaleString()}</td>
-                  <td className="px-4 py-2.5">{t.country}</td>
-                  <td className="px-4 py-2.5 text-xs">{t.device}</td>
-                  <td className="px-4 py-2.5 text-xs">{t.method}</td>
-                  <td className="px-4 py-2.5 text-xs truncate max-w-[140px]">{t.merchant}</td>
-                  <td className="px-4 py-2.5"><div className="flex items-center gap-2"><RiskBar value={t.risk} className="w-16" /><span className="font-mono text-xs">{t.risk}</span></div></td>
-                  <td className="px-4 py-2.5">
-                    {t.status === "blocked" ? <RiskBadge severity="critical" label={<><Ban className="h-3 w-3 inline mr-0.5" />blocked</>} />
-                      : t.status === "flagged" ? <RiskBadge severity="high" label={<><AlertTriangle className="h-3 w-3 inline mr-0.5" />flagged</>} />
-                      : <RiskBadge severity="low" label="approved" />}
-                  </td>
-                </tr>
-              ))}
+              {txs.map((t, i) => {
+                const risk = t.risk_score ?? 0;
+                return (
+                  <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }} className="border-b border-white/4 hover:bg-white/3">
+                    <td className="py-2 text-[11px] text-muted-foreground font-mono">{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</td>
+                    <td className="font-mono">{t.currency} {Number(t.amount).toLocaleString()}</td>
+                    <td>{t.channel}</td>
+                    <td className="text-muted-foreground">{t.merchant ?? "—"}</td>
+                    <td>{t.country ?? "—"}</td>
+                    <td><span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${t.status === "blocked" ? "bg-rose-500/20 text-rose-300" : t.status === "pending" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>{t.status}</span></td>
+                    <td className="w-40"><div className="flex items-center gap-2"><RiskBar value={risk} className="max-w-[100px]" /><RiskBadge severity={sev(risk)} /></div></td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 text-xs text-muted-foreground flex items-center justify-between border-t border-white/6">
-          <span>Showing {Math.min(40, filtered.length)} of {filtered.length}</span>
-          <span className="font-mono">Model v2.4.1 · avg latency 27ms</span>
-        </div>
       </GlassCard>
     </div>
+  );
+}
+
+function StatCard({ label, value, accent = "" }: { label: string; value: string; accent?: string }) {
+  return (
+    <GlassCard>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`text-2xl font-mono mt-1 ${accent}`}>{value}</div>
+    </GlassCard>
   );
 }

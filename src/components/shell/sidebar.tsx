@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, GitBranch, FileSearch2, Coins, Radar, Globe2, Atom, Users, Brain,
@@ -35,8 +35,11 @@ const nav = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [, tick] = useState(0);
+  useEffect(() => session.subscribe(() => tick((n) => n + 1)), []);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const role = session.getRole();
+
 
   return (
     <aside
