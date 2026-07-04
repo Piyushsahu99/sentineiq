@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useTransactions } from "@/lib/live-queries";
 import { supabase } from "@/integrations/supabase/client";
 import { correlateTransaction } from "@/lib/correlation.functions";
+import { seedDeterministic } from "@/lib/seed.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
