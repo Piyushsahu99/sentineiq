@@ -72,9 +72,14 @@ function TxPage() {
         title="Transaction Analytics"
         subtitle="Live transactions from Supabase — insert one below and watch the Correlation Engine score it in real time."
         actions={
-          <button disabled={busy} onClick={simulate} className="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold hover:brightness-110 disabled:opacity-60">
-            {busy ? "Correlating…" : "Simulate suspicious transaction"}
-          </button>
+          <div className="flex gap-2">
+            <button disabled={seeding} onClick={seedHighRisk} title="Deterministic smoke-test scenario (composite = 89)" className="text-xs px-3 py-1.5 rounded-lg hairline hover:bg-white/6 disabled:opacity-60">
+              {seeding ? "Seeding…" : "Seed deterministic scenario"}
+            </button>
+            <button disabled={busy} onClick={simulate} className="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold hover:brightness-110 disabled:opacity-60">
+              {busy ? "Correlating…" : "Simulate suspicious transaction"}
+            </button>
+          </div>
         }
       />
 
