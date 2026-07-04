@@ -21,6 +21,7 @@ import { Route as AppThreatIntelRouteImport } from './routes/_app.threat-intel'
 import { Route as AppTelemetryRouteImport } from './routes/_app.telemetry'
 import { Route as AppQuantumRouteImport } from './routes/_app.quantum'
 import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
+import { Route as AppExplainableAiRouteImport } from './routes/_app.explainable-ai'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCorrelationRouteImport } from './routes/_app.correlation'
 import { Route as AppBehaviorRouteImport } from './routes/_app.behavior'
@@ -84,6 +85,11 @@ const AppInvestigationsRoute = AppInvestigationsRouteImport.update({
   path: '/investigations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExplainableAiRoute = AppExplainableAiRouteImport.update({
+  id: '/explainable-ai',
+  path: '/explainable-ai',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/behavior': typeof AppBehaviorRoute
   '/correlation': typeof AppCorrelationRoute
   '/dashboard': typeof AppDashboardRoute
+  '/explainable-ai': typeof AppExplainableAiRoute
   '/investigations': typeof AppInvestigationsRoute
   '/quantum': typeof AppQuantumRoute
   '/telemetry': typeof AppTelemetryRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/behavior': typeof AppBehaviorRoute
   '/correlation': typeof AppCorrelationRoute
   '/dashboard': typeof AppDashboardRoute
+  '/explainable-ai': typeof AppExplainableAiRoute
   '/investigations': typeof AppInvestigationsRoute
   '/quantum': typeof AppQuantumRoute
   '/telemetry': typeof AppTelemetryRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/_app/behavior': typeof AppBehaviorRoute
   '/_app/correlation': typeof AppCorrelationRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/explainable-ai': typeof AppExplainableAiRoute
   '/_app/investigations': typeof AppInvestigationsRoute
   '/_app/quantum': typeof AppQuantumRoute
   '/_app/telemetry': typeof AppTelemetryRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/behavior'
     | '/correlation'
     | '/dashboard'
+    | '/explainable-ai'
     | '/investigations'
     | '/quantum'
     | '/telemetry'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/behavior'
     | '/correlation'
     | '/dashboard'
+    | '/explainable-ai'
     | '/investigations'
     | '/quantum'
     | '/telemetry'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/_app/behavior'
     | '/_app/correlation'
     | '/_app/dashboard'
+    | '/_app/explainable-ai'
     | '/_app/investigations'
     | '/_app/quantum'
     | '/_app/telemetry'
@@ -294,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInvestigationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/explainable-ai': {
+      id: '/_app/explainable-ai'
+      path: '/explainable-ai'
+      fullPath: '/explainable-ai'
+      preLoaderRoute: typeof AppExplainableAiRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -322,6 +341,7 @@ interface AppRouteChildren {
   AppBehaviorRoute: typeof AppBehaviorRoute
   AppCorrelationRoute: typeof AppCorrelationRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppExplainableAiRoute: typeof AppExplainableAiRoute
   AppInvestigationsRoute: typeof AppInvestigationsRoute
   AppQuantumRoute: typeof AppQuantumRoute
   AppTelemetryRoute: typeof AppTelemetryRoute
@@ -333,6 +353,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBehaviorRoute: AppBehaviorRoute,
   AppCorrelationRoute: AppCorrelationRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppExplainableAiRoute: AppExplainableAiRoute,
   AppInvestigationsRoute: AppInvestigationsRoute,
   AppQuantumRoute: AppQuantumRoute,
   AppTelemetryRoute: AppTelemetryRoute,
