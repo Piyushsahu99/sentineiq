@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/sq/glass-card";
-import { session } from "@/lib/session";
 import { ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth/mfa")({
+  ssr: false,
   component: MfaPage,
 });
 
@@ -15,6 +16,13 @@ function MfaPage() {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const complete = digits.every((d) => d);
 
+  useEffect(() => {
+    // Require an authenticated user to be on this page
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) nav({ to: "/auth/login", replace: true });
+    });
+  }, [nav]);
+
   function setDigit(i: number, v: string) {
     const next = [...digits];
     next[i] = v.slice(-1);
@@ -22,10 +30,13 @@ function MfaPage() {
     if (v && i < 5) refs.current[i+1]?.focus();
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    session.setMfa();
-    nav({ to: "/auth/role-select" });
+    // Decorative step — real auth already succeeded. Route based on role.
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) { nav({ to: "/auth/login" }); return; }
+    const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id).limit(1).maybeSingle();
+    nav({ to: r?.role ? "/dashboard" : "/auth/role-select" });
   }
 
   return (
@@ -42,25 +53,17 @@ function MfaPage() {
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div className="flex justify-center gap-2">
             {digits.map((d, i) => (
-              <input
-                key={i}
-                ref={(el) => { refs.current[i] = el; }}
-                value={d}
+              <input key={i} ref={(el) => { refs.current[i] = el; }} value={d}
                 onChange={(e) => setDigit(i, e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Backspace" && !digits[i] && i > 0) refs.current[i-1]?.focus(); }}
                 className="h-12 w-10 text-center text-lg font-mono bg-white/5 hairline rounded-lg outline-none focus:border-cyan-400/50 focus:bg-white/8"
-                maxLength={1}
-                inputMode="numeric"
-              />
+                maxLength={1} inputMode="numeric" />
             ))}
           </div>
-          <div className="text-xs text-muted-foreground">
-            Push sent to <b className="text-foreground">iPhone 15 · Watson</b> · resend in <span className="tabular-nums">28s</span>
-          </div>
           <button disabled={!complete} className="w-full rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold py-2.5 text-sm hover:brightness-110 disabled:opacity-50 transition">
-            Verify
+            Verify &amp; continue
           </button>
-          <button type="button" onClick={() => { setDigits(["1","2","3","4","5","6"]); }} className="text-xs text-cyan-300 hover:underline">
+          <button type="button" onClick={() => setDigits(["1","2","3","4","5","6"])} className="text-xs text-cyan-300 hover:underline">
             Use demo code
           </button>
         </form>

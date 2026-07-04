@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/sq/glass-card";
-import { session, type Role } from "@/lib/session";
+import { setRoleForCurrentUser, type Role } from "@/lib/session";
 import { Shield, DollarSign, Gauge, Briefcase } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth/role-select")({
+  ssr: false,
   component: RolePage,
 });
 
@@ -19,6 +21,18 @@ const roles: { name: Role; icon: React.ComponentType<{ className?: string }>; de
 function RolePage() {
   const nav = useNavigate();
   const [sel, setSel] = useState<Role>("SOC Analyst");
+  const [saving, setSaving] = useState(false);
+
+  async function commit() {
+    setSaving(true);
+    try {
+      await setRoleForCurrentUser(sel);
+      nav({ to: "/dashboard" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to set role");
+    } finally { setSaving(false); }
+  }
+
   return (
     <div className="w-full max-w-4xl">
       <div className="text-center mb-8">
@@ -27,12 +41,7 @@ function RolePage() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {roles.map((r) => (
-          <motion.button
-            key={r.name}
-            whileHover={{ y: -4 }}
-            onClick={() => setSel(r.name)}
-            className="text-left"
-          >
+          <motion.button key={r.name} whileHover={{ y: -4 }} onClick={() => setSel(r.name)} className="text-left">
             <GlassCard className={`h-full relative overflow-hidden ${sel === r.name ? "border-cyan-400/40 ring-1 ring-cyan-400/30" : ""}`}>
               <div className={`absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gradient-to-br ${r.accent} opacity-40 blur-2xl`} />
               <div className="relative">
@@ -53,8 +62,8 @@ function RolePage() {
       </div>
       <div className="mt-6 flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">You can change this from Settings → User Roles at any time.</p>
-        <button onClick={() => { session.setRole(sel); nav({ to: "/dashboard" }); }} className="rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-5 py-2 text-sm hover:brightness-110">
-          Enter SentinelQ
+        <button disabled={saving} onClick={commit} className="rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-5 py-2 text-sm hover:brightness-110 disabled:opacity-60">
+          {saving ? "Setting up…" : "Enter SentinelQ"}
         </button>
       </div>
     </div>
