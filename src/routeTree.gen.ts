@@ -17,6 +17,7 @@ import { Route as AuthMfaRouteImport } from './routes/auth.mfa'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
 import { Route as AppTransactionsRouteImport } from './routes/_app.transactions'
+import { Route as AppThreatIntelRouteImport } from './routes/_app.threat-intel'
 import { Route as AppTelemetryRouteImport } from './routes/_app.telemetry'
 import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -61,6 +62,11 @@ const AppTransactionsRoute = AppTransactionsRouteImport.update({
   path: '/transactions',
   getParentRoute: () => AppRoute,
 } as any)
+const AppThreatIntelRoute = AppThreatIntelRouteImport.update({
+  id: '/threat-intel',
+  path: '/threat-intel',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTelemetryRoute = AppTelemetryRouteImport.update({
   id: '/telemetry',
   path: '/telemetry',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/investigations': typeof AppInvestigationsRoute
   '/telemetry': typeof AppTelemetryRoute
+  '/threat-intel': typeof AppThreatIntelRoute
   '/transactions': typeof AppTransactionsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/investigations': typeof AppInvestigationsRoute
   '/telemetry': typeof AppTelemetryRoute
+  '/threat-intel': typeof AppThreatIntelRoute
   '/transactions': typeof AppTransactionsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/investigations': typeof AppInvestigationsRoute
   '/_app/telemetry': typeof AppTelemetryRoute
+  '/_app/threat-intel': typeof AppThreatIntelRoute
   '/_app/transactions': typeof AppTransactionsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/investigations'
     | '/telemetry'
+    | '/threat-intel'
     | '/transactions'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/investigations'
     | '/telemetry'
+    | '/threat-intel'
     | '/transactions'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/investigations'
     | '/_app/telemetry'
+    | '/_app/threat-intel'
     | '/_app/transactions'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -230,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransactionsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/threat-intel': {
+      id: '/_app/threat-intel'
+      path: '/threat-intel'
+      fullPath: '/threat-intel'
+      preLoaderRoute: typeof AppThreatIntelRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/telemetry': {
       id: '/_app/telemetry'
       path: '/telemetry'
@@ -266,6 +285,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppInvestigationsRoute: typeof AppInvestigationsRoute
   AppTelemetryRoute: typeof AppTelemetryRoute
+  AppThreatIntelRoute: typeof AppThreatIntelRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
 }
 
@@ -274,6 +294,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppInvestigationsRoute: AppInvestigationsRoute,
   AppTelemetryRoute: AppTelemetryRoute,
+  AppThreatIntelRoute: AppThreatIntelRoute,
   AppTransactionsRoute: AppTransactionsRoute,
 }
 
