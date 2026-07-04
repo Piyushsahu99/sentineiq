@@ -21,6 +21,9 @@ export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopi
   const nav = useNavigate();
   const [notifs, setNotifs] = useState(initialNotifs);
   const [live, setLive] = useState(true);
+  const [, tick] = useState(0);
+  useEffect(() => session.subscribe(() => tick((n) => n + 1)), []);
+
 
   useEffect(() => {
     if (!live) return;
@@ -138,7 +141,7 @@ export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopi
             <button onClick={() => nav({ to: "/settings" })} className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-white/6"><Settings2 className="h-4 w-4" />Settings</button>
             <div className="border-t border-white/6 my-2" />
             <button
-              onClick={() => { session.signOut(); nav({ to: "/auth/login" }); }}
+              onClick={async () => { await session.signOut(); nav({ to: "/auth/login" }); }}
               className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-rose-300 hover:bg-rose-500/10"
             >
               <LogOut className="h-4 w-4" />Sign out
