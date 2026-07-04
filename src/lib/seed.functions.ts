@@ -61,14 +61,12 @@ export const seedDeterministic = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // ---- 1. Wipe prior seed rows (marker: source or merchant prefix "seed:") ----
-    await supabaseAdmin.from("alerts").delete().eq("source", "seed:correlation");
-    await supabaseAdmin.from("ai_investigations").delete().like("title", "seed:%");
-    await supabaseAdmin.from("risk_scores").delete().in(
-      "transaction_id",
-      // subquery workaround: fetch seeded tx ids first
-      (await supabaseAdmin.from("transactions").select("id").like("merchant", "seed:%")).data?.map((r) => r.id) ?? ["00000000-0000-0000-0000-000000000000"],
-    );
+    // ---- 1. Wipe prior seed rows (marker: merchant/source/email prefix "seed:") ----
+    const priorTxIds = (await supabaseAdmin.from("transactions").select("id").like("merchant", "seed:%")).data?.map((r) => r.id) ?? [];
+    const idFilter = priorTxIds.length ? priorTxIds : ["00000000-0000-0000-0000-000000000000"];
+    await supabaseAdmin.from("alerts").delete().in("transaction_id", idFilter);
+    await supabaseAdmin.from("ai_investigations").delete().in("transaction_id", idFilter);
+    await supabaseAdmin.from("risk_scores").delete().in("transaction_id", idFilter);
     await supabaseAdmin.from("transactions").delete().like("merchant", "seed:%");
     await supabaseAdmin.from("cyber_telemetry").delete().like("source", "seed:%");
     await supabaseAdmin.from("iocs").delete().like("value", "seed:%");
