@@ -37,7 +37,10 @@ export const correlateTransaction = createServerFn({ method: "POST" })
     const hour = new Date(tx.created_at).getUTCHours();
     if (hour < 6 || hour > 22) contributors.push({ name: `Off-hours activity (${hour}:00 UTC)`, weight: 7 });
 
-    if ((iocHits?.length ?? 0) > 0 && Math.random() > 0.6) contributors.push({ name: "Related IOC observed in tenant", weight: 10 });
+    // Deterministic: fire when tenant has any IOCs and the tx destination is a known high-risk geo.
+    if ((iocHits?.length ?? 0) > 0 && tx.country && ["RU","NG","AE","IR","CN"].includes(tx.country)) {
+      contributors.push({ name: "Related IOC observed in tenant", weight: 10 });
+    }
 
     const composite = Math.min(99, contributors.reduce((s, c) => s + c.weight, 0) + Math.round(baseline / 5));
 

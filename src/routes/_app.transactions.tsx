@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useTransactions } from "@/lib/live-queries";
 import { supabase } from "@/integrations/supabase/client";
 import { correlateTransaction } from "@/lib/correlation.functions";
+import { seedDeterministic } from "@/lib/seed.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,7 +22,23 @@ const sev = (r: number): Sev => r >= 80 ? "critical" : r >= 60 ? "high" : r >= 4
 function TxPage() {
   const { data: txs = [] } = useTransactions(60);
   const correlate = useServerFn(correlateTransaction);
+  const seed = useServerFn(seedDeterministic);
   const [busy, setBusy] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  async function seedHighRisk() {
+    setSeeding(true);
+    try {
+      const res = await seed({ data: { scenario: "high_risk" } });
+      const target = res.transactions?.[0];
+      if (!target) throw new Error("Seed returned no transaction");
+      toast.success(`Seeded deterministic scenario · correlating tx…`);
+      const c = await correlate({ data: { transactionId: target.id } });
+      toast.success(`Deterministic run: composite ${c.composite} (expected ${res.expected_high_risk_composite})`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Seed failed");
+    } finally { setSeeding(false); }
+  }
 
   async function simulate() {
     setBusy(true);
@@ -55,9 +72,14 @@ function TxPage() {
         title="Transaction Analytics"
         subtitle="Live transactions from Supabase — insert one below and watch the Correlation Engine score it in real time."
         actions={
-          <button disabled={busy} onClick={simulate} className="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold hover:brightness-110 disabled:opacity-60">
-            {busy ? "Correlating…" : "Simulate suspicious transaction"}
-          </button>
+          <div className="flex gap-2">
+            <button disabled={seeding} onClick={seedHighRisk} title="Deterministic smoke-test scenario (composite = 89)" className="text-xs px-3 py-1.5 rounded-lg hairline hover:bg-white/6 disabled:opacity-60">
+              {seeding ? "Seeding…" : "Seed deterministic scenario"}
+            </button>
+            <button disabled={busy} onClick={simulate} className="text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold hover:brightness-110 disabled:opacity-60">
+              {busy ? "Correlating…" : "Simulate suspicious transaction"}
+            </button>
+          </div>
         }
       />
 
