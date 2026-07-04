@@ -19,6 +19,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-pas
 import { Route as AppTransactionsRouteImport } from './routes/_app.transactions'
 import { Route as AppThreatIntelRouteImport } from './routes/_app.threat-intel'
 import { Route as AppTelemetryRouteImport } from './routes/_app.telemetry'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuantumRouteImport } from './routes/_app.quantum'
 import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
@@ -76,6 +77,11 @@ const AppThreatIntelRoute = AppThreatIntelRouteImport.update({
 const AppTelemetryRoute = AppTelemetryRouteImport.update({
   id: '/telemetry',
   path: '/telemetry',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReportsRoute = AppReportsRouteImport.update({
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/investigations': typeof AppInvestigationsRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
+  '/settings': typeof AppSettingsRoute
   '/telemetry': typeof AppTelemetryRoute
   '/threat-intel': typeof AppThreatIntelRoute
   '/transactions': typeof AppTransactionsRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/investigations': typeof AppInvestigationsRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
+  '/settings': typeof AppSettingsRoute
   '/telemetry': typeof AppTelemetryRoute
   '/threat-intel': typeof AppThreatIntelRoute
   '/transactions': typeof AppTransactionsRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/_app/investigations': typeof AppInvestigationsRoute
   '/_app/quantum': typeof AppQuantumRoute
   '/_app/reports': typeof AppReportsRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/telemetry': typeof AppTelemetryRoute
   '/_app/threat-intel': typeof AppThreatIntelRoute
   '/_app/transactions': typeof AppTransactionsRoute
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/quantum'
     | '/reports'
+    | '/settings'
     | '/telemetry'
     | '/threat-intel'
     | '/transactions'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/investigations'
     | '/quantum'
     | '/reports'
+    | '/settings'
     | '/telemetry'
     | '/threat-intel'
     | '/transactions'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_app/investigations'
     | '/_app/quantum'
     | '/_app/reports'
+    | '/_app/settings'
     | '/_app/telemetry'
     | '/_app/threat-intel'
     | '/_app/transactions'
@@ -328,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTelemetryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/reports': {
       id: '/_app/reports'
       path: '/reports'
@@ -404,6 +423,7 @@ interface AppRouteChildren {
   AppInvestigationsRoute: typeof AppInvestigationsRoute
   AppQuantumRoute: typeof AppQuantumRoute
   AppReportsRoute: typeof AppReportsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppTelemetryRoute: typeof AppTelemetryRoute
   AppThreatIntelRoute: typeof AppThreatIntelRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
@@ -419,6 +439,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInvestigationsRoute: AppInvestigationsRoute,
   AppQuantumRoute: AppQuantumRoute,
   AppReportsRoute: AppReportsRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppTelemetryRoute: AppTelemetryRoute,
   AppThreatIntelRoute: AppThreatIntelRoute,
   AppTransactionsRoute: AppTransactionsRoute,
