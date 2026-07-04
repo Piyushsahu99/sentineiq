@@ -16,6 +16,7 @@ import { Route as AuthRoleSelectRouteImport } from './routes/auth.role-select'
 import { Route as AuthMfaRouteImport } from './routes/auth.mfa'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
+import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCorrelationRouteImport } from './routes/_app.correlation'
 
@@ -53,6 +54,11 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const AppInvestigationsRoute = AppInvestigationsRouteImport.update({
+  id: '/investigations',
+  path: '/investigations',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/correlation': typeof AppCorrelationRoute
   '/dashboard': typeof AppDashboardRoute
+  '/investigations': typeof AppInvestigationsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/correlation': typeof AppCorrelationRoute
   '/dashboard': typeof AppDashboardRoute
+  '/investigations': typeof AppInvestigationsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/_app/correlation': typeof AppCorrelationRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/investigations': typeof AppInvestigationsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/correlation'
     | '/dashboard'
+    | '/investigations'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/mfa'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/correlation'
     | '/dashboard'
+    | '/investigations'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/mfa'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_app/correlation'
     | '/_app/dashboard'
+    | '/_app/investigations'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/mfa'
@@ -187,6 +199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_app/investigations': {
+      id: '/_app/investigations'
+      path: '/investigations'
+      fullPath: '/investigations'
+      preLoaderRoute: typeof AppInvestigationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -207,11 +226,13 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppCorrelationRoute: typeof AppCorrelationRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppInvestigationsRoute: typeof AppInvestigationsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppCorrelationRoute: AppCorrelationRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppInvestigationsRoute: AppInvestigationsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
