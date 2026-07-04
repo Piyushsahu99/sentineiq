@@ -55,8 +55,10 @@ export async function getCurrentRole(): Promise<Role | null> {
 export async function setRoleForCurrentUser(role: Role) {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Not signed in");
-  await supabase.from("user_roles").delete().eq("user_id", data.user.id);
-  const { error } = await supabase.from("user_roles").insert({ user_id: data.user.id, role: ROLE_TO_ENUM[role] });
+  // Initial role assignment goes through a SECURITY DEFINER RPC that only
+  // permits a first-time assignment. Changing a role afterwards requires
+  // an administrator (service_role) — users cannot escalate themselves.
+  const { error } = await supabase.rpc("assign_initial_role", { _role: ROLE_TO_ENUM[role] });
   if (error) throw error;
   await refreshCache();
 }
