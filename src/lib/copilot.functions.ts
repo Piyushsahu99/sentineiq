@@ -1,12 +1,17 @@
 // AI Copilot — grounded on live Supabase data, calls Lovable AI Gateway (Gemini).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const Input = z.object({ prompt: z.string().min(1).max(2000) });
 
 export const askCopilot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => Input.parse(raw))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { data: isAnalyst } = await context.supabase.rpc("is_analyst", { _user_id: context.userId });
+    if (!isAnalyst) throw new Error("Forbidden: analyst role required");
+
     const key = process.env.LOVABLE_API_KEY;
     if (!key) return { answer: "AI Gateway is not configured. Set LOVABLE_API_KEY to enable the Copilot." };
 
