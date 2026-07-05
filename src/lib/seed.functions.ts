@@ -104,9 +104,9 @@ export const seedDeterministic = createServerFn({ method: "POST" })
     await supabaseAdmin.from("cyber_telemetry").delete().like("source", "seed:%");
     await supabaseAdmin.from("iocs").delete().like("value", "seed:%");
     await supabaseAdmin.from("threat_intel").delete().like("name", "seed:%");
-    await supabaseAdmin.from("knowledge_edges").delete().like("relation", "seed:%");
-    await supabaseAdmin.from("quantum_assets").delete().like("name", "seed:%");
-    await supabaseAdmin.from("sessions").delete().like("ip", "seed:%");
+    await supabaseAdmin.from("knowledge_edges").delete().eq("src_type", "seed");
+    await supabaseAdmin.from("quantum_assets").delete().like("asset", "seed:%");
+    await supabaseAdmin.from("sessions").delete().like("city", "seed:%");
     await supabaseAdmin.from("devices").delete().like("fingerprint", "seed:%");
     await supabaseAdmin.from("beneficiaries").delete().like("name", "seed:%");
     await supabaseAdmin.from("customers").delete().like("email", "seed+%@sentinelq.test");
