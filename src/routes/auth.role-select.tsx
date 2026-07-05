@@ -2,9 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/sq/glass-card";
 import { setRoleForCurrentUser, type Role } from "@/lib/session";
+import { seedDeterministic } from "@/lib/seed.functions";
 import { Shield, DollarSign, Gauge, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/auth/role-select")({
   ssr: false,
