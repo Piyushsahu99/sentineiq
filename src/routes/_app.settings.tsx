@@ -2,14 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card";
 import { Switch } from "@/components/ui/switch";
-import { Shield, Bell, Plug, Database, Rss, Atom, KeyRound, RotateCw } from "lucide-react";
+import { Shield, Bell, Plug, Database, Rss, Atom, KeyRound, RotateCw, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { seedDeterministic } from "@/lib/seed.functions";
 
 export const Route = createFileRoute("/_app/settings")({
+  ssr: false,
   component: SettingsPage,
 });
 
 const tabs = [
+  { k: "data", label: "Demo Data", icon: Sparkles },
   { k: "roles", label: "User Roles", icon: Shield },
   { k: "notifs", label: "Notifications", icon: Bell },
   { k: "api", label: "API Integrations", icon: Plug },
@@ -19,7 +23,28 @@ const tabs = [
 ] as const;
 
 function SettingsPage() {
-  const [tab, setTab] = useState<typeof tabs[number]["k"]>("roles");
+  const [tab, setTab] = useState<typeof tabs[number]["k"]>("data");
+  const seed = useServerFn(seedDeterministic);
+  const [busy, setBusy] = useState<null | "seed" | "reset">(null);
+
+  async function runSeed(scenario: "demo" | "high_risk" | "baseline" | "reset") {
+    setBusy(scenario === "reset" ? "reset" : "seed");
+    try {
+      const res = await seed({ data: { scenario } });
+      if (scenario === "reset") {
+        toast.success("Demo data cleared.");
+      } else {
+        toast.success(
+          `Seeded: ${res.transactions?.length ?? 0} tx · ${res.alerts ?? 0} alerts · ${res.investigations ?? 0} investigations · ${res.telemetry_count ?? 0} telemetry`,
+        );
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Seed failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
 
   return (
     <div>
