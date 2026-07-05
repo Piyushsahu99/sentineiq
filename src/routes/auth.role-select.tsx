@@ -2,9 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/sq/glass-card";
 import { setRoleForCurrentUser, type Role } from "@/lib/session";
+import { seedDeterministic } from "@/lib/seed.functions";
 import { Shield, DollarSign, Gauge, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/auth/role-select")({
   ssr: false,
@@ -22,11 +24,19 @@ function RolePage() {
   const nav = useNavigate();
   const [sel, setSel] = useState<Role>("SOC Analyst");
   const [saving, setSaving] = useState(false);
+  const seed = useServerFn(seedDeterministic);
 
   async function commit() {
     setSaving(true);
     try {
       await setRoleForCurrentUser(sel);
+      // First-login seed: populate dashboards with deterministic demo data.
+      // Idempotent — safe even if the user's tenant already has rows.
+      try {
+        await seed({ data: { scenario: "high_risk" } });
+      } catch (e) {
+        console.warn("initial seed failed (non-fatal)", e);
+      }
       nav({ to: "/dashboard" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to set role");
