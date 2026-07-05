@@ -62,6 +62,60 @@ function SettingsPage() {
         </div>
 
         <div className="col-span-12 md:col-span-9 space-y-6">
+          {tab === "data" && (
+            <GlassCard>
+              <SectionHeader
+                title="Demo Data"
+                description="Populate every module with a deterministic, idempotent dataset — safe to re-run."
+              />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button
+                  disabled={busy !== null}
+                  onClick={() => runSeed("demo")}
+                  className="rounded-xl hairline bg-gradient-to-br from-cyan-500/15 to-violet-500/15 hover:brightness-110 disabled:opacity-60 p-4 text-left"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="h-4 w-4 text-cyan-300" />
+                    <div className="text-sm font-semibold">Full demo scenario</div>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    8 customers · 30 transactions · 24 alerts · 8 investigations · 40 telemetry events · IOCs, threats, quantum assets.
+                  </div>
+                  <div className="text-[10px] text-cyan-300 mt-2">{busy === "seed" ? "Seeding…" : "Recommended"}</div>
+                </button>
+                <button
+                  disabled={busy !== null}
+                  onClick={() => runSeed("high_risk")}
+                  className="rounded-xl hairline bg-white/3 hover:bg-white/6 disabled:opacity-60 p-4 text-left"
+                >
+                  <div className="text-sm font-semibold mb-1">High-risk only</div>
+                  <div className="text-[11px] text-muted-foreground">Same schema, biased toward critical alerts and blocked wires.</div>
+                </button>
+                <button
+                  disabled={busy !== null}
+                  onClick={() => runSeed("baseline")}
+                  className="rounded-xl hairline bg-white/3 hover:bg-white/6 disabled:opacity-60 p-4 text-left"
+                >
+                  <div className="text-sm font-semibold mb-1">Baseline / quiet</div>
+                  <div className="text-[11px] text-muted-foreground">Quiet tenant with low-risk activity for empty-state screenshots.</div>
+                </button>
+              </div>
+              <div className="mt-4 flex items-center justify-between rounded-lg hairline bg-rose-500/5 p-3">
+                <div>
+                  <div className="text-sm font-medium flex items-center gap-2"><Trash2 className="h-4 w-4 text-rose-300" /> Reset demo data</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">Removes every row tagged <code className="font-mono">seed:*</code>. Leaves live data untouched.</div>
+                </div>
+                <button
+                  disabled={busy !== null}
+                  onClick={() => runSeed("reset")}
+                  className="text-xs px-3 py-1.5 rounded-lg hairline hover:bg-rose-500/15 text-rose-200 disabled:opacity-60"
+                >
+                  {busy === "reset" ? "Clearing…" : "Reset"}
+                </button>
+              </div>
+            </GlassCard>
+          )}
+
           {tab === "roles" && (
             <GlassCard>
               <SectionHeader title="User Roles &amp; Permissions" />
