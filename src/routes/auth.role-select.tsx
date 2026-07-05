@@ -29,19 +29,30 @@ function RolePage() {
   async function commit() {
     setSaving(true);
     try {
-      await setRoleForCurrentUser(sel);
-      // First-login seed: populate dashboards with deterministic demo data.
-      // Idempotent — safe even if the user's tenant already has rows.
       try {
-        await seed({ data: { scenario: "high_risk" } });
+        await setRoleForCurrentUser(sel);
+      } catch (e) {
+        // If the user already has a role assigned (e.g. re-visiting this page),
+        // that's fine — proceed to the dashboard instead of blocking them.
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/already assigned/i.test(msg)) {
+          toast.error(msg || "Failed to set role");
+          setSaving(false);
+          return;
+        }
+        toast.message("Role already set — continuing.");
+      }
+      // First-login seed: populate dashboards with deterministic demo data.
+      // Idempotent — safe even if the tenant already has rows.
+      try {
+        await seed({ data: { scenario: "demo" } });
       } catch (e) {
         console.warn("initial seed failed (non-fatal)", e);
       }
       nav({ to: "/dashboard" });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to set role");
     } finally { setSaving(false); }
   }
+
 
   return (
     <div className="w-full max-w-4xl">
