@@ -1,15 +1,20 @@
 // AI Correlation Engine — computes composite risk and creates investigation + alert.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const Input = z.object({ transactionId: z.string().uuid() });
 
 type Contributor = { name: string; weight: number };
 
 export const correlateTransaction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => Input.parse(raw))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { data: isAnalyst } = await context.supabase.rpc("is_analyst", { _user_id: context.userId });
+    if (!isAnalyst) throw new Error("Forbidden: analyst role required");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
 
     const { data: tx, error: txErr } = await supabaseAdmin.from("transactions").select("*").eq("id", data.transactionId).maybeSingle();
     if (txErr || !tx) throw new Error("Transaction not found");
