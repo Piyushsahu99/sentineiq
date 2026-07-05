@@ -295,9 +295,9 @@ export const seedDeterministic = createServerFn({ method: "POST" })
         customer_id: c.id,
         fingerprint: `seed:fp-${i}`,
         os: pick(rng, ["iOS", "Android", "macOS", "Windows"]),
-        first_seen: iso(-60 * 24 * 20),
+        browser: pick(rng, ["Safari", "Chrome", "Firefox", "Edge"]),
+        trusted: rng() > 0.4,
         last_seen: iso(-i * 30),
-        trust_score: 40 + Math.floor(rng() * 60),
       })),
     );
     await supabaseAdmin.from("devices").upsert(devices);
@@ -307,11 +307,12 @@ export const seedDeterministic = createServerFn({ method: "POST" })
         id: await seedUuid(`session:${i}`),
         customer_id: c.id,
         device_id: devices[i]?.id ?? null,
-        ip: `seed:203.0.113.${i}`,
+        ip: `203.0.113.${i}`,
         country: c.country,
+        city: `seed:city-${i}`,
+        is_vpn: rng() > 0.7,
+        is_tor: rng() > 0.9,
         started_at: iso(-i * 60),
-        ended_at: iso(-i * 60 + 45),
-        risk_score: 20 + Math.floor(rng() * 60),
       })),
     );
     await supabaseAdmin.from("sessions").upsert(sessions);
@@ -323,28 +324,27 @@ export const seedDeterministic = createServerFn({ method: "POST" })
         name: `seed:Beneficiary ${i}`,
         iban: `NL${20 + i}RABO0${1000000 + i}`,
         country: pick(rng, HIGH_RISK),
-        first_seen: iso(-60 * 24 * 5),
+        trusted: false,
       })),
     );
     await supabaseAdmin.from("beneficiaries").upsert(beneficiaries);
 
     const quantum = await Promise.all(
       [
-        ["RSA-2048 signing key", "signing", "RSA-2048", "critical"],
-        ["TLS 1.2 endpoint", "TLS", "ECDHE-RSA", "high"],
-        ["Hybrid Kyber-1024", "KEM", "Kyber-1024 + X25519", "low"],
-        ["Legacy 3DES vault", "encryption", "3DES", "critical"],
-        ["Dilithium roadmap slot", "signing", "Dilithium-3", "medium"],
-      ].map(async ([name, kind, algo, risk], i) => ({
+        ["RSA-2048 signing key", "RSA", 2048, "TLS 1.2", 90, "pending"],
+        ["TLS 1.2 endpoint", "ECDHE-RSA", 256, "TLS 1.2", 70, "in-progress"],
+        ["Hybrid Kyber-1024", "Kyber-1024+X25519", 1024, "TLS 1.3", 20, "complete"],
+        ["Legacy 3DES vault", "3DES", 168, "n/a", 95, "pending"],
+        ["Dilithium roadmap slot", "Dilithium-3", 3072, "TLS 1.3", 40, "planned"],
+      ].map(async ([asset, algo, keySize, tls, sens, status], i) => ({
         id: await seedUuid(`quantum:${i}`),
-        name: `seed:${name}`,
-        kind,
-        algorithm: algo,
-        pqc_risk: risk,
-        exposure_usd: 1_000_000 * (i + 1),
-        migration_deadline: iso(60 * 24 * 365 * (i + 1)),
-        owner: "PKI Team",
-        notes: `Seeded quantum asset: ${name}`,
+        asset: `seed:${asset as string}`,
+        algo: algo as string,
+        key_size: keySize as number,
+        tls_version: tls as string,
+        sensitivity: sens as number,
+        migration_status: status as string,
+        expires_at: iso(60 * 24 * 365 * (i + 1)),
       })),
     );
     await supabaseAdmin.from("quantum_assets").upsert(quantum);
@@ -352,15 +352,15 @@ export const seedDeterministic = createServerFn({ method: "POST" })
     const edges = await Promise.all(
       Array.from({ length: 10 }, async (_, i) => ({
         id: await seedUuid(`edge:${i}`),
-        src_type: "customer",
+        src_type: "seed",
         src_id: customers[i % customers.length].id,
-        dst_type: "transaction",
+        dst_type: pick(rng, ["transaction", "device", "session"]),
         dst_id: txRows[i % txRows.length].id,
-        relation: `seed:${pick(rng, ["initiated", "linked", "co-located", "shared-device"])}`,
         weight: Math.round(rng() * 100),
       })),
     );
     await supabaseAdmin.from("knowledge_edges").upsert(edges);
+
 
     return {
       scenario: data.scenario,
