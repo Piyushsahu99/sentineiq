@@ -61,13 +61,16 @@ function RolePage() {
         <p className="text-xs text-muted-foreground mt-2">Your dashboard, KPIs, and default views adapt to how you work.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {roles.map((r) => (
-          <motion.button key={r.name} whileHover={{ y: -4 }} onClick={() => setSel(r.name)} className="text-left">
-            <GlassCard className={`h-full relative overflow-hidden ${sel === r.name ? "border-cyan-400/40 ring-1 ring-cyan-400/30" : ""}`}>
+        {roles.map((r) => {
+          const isSel = sel === r.name;
+          return (
+          <motion.button key={r.name} whileHover={{ y: -4 }} onClick={() => setSel(r.name)} className="text-left" aria-pressed={isSel}>
+            <GlassCard className={`h-full relative overflow-hidden transition ${isSel ? "border-cyan-400/70 ring-2 ring-cyan-400/50 shadow-[0_0_28px_rgba(34,211,238,0.25)]" : "opacity-80"}`}>
               <div className={`absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gradient-to-br ${r.accent} opacity-40 blur-2xl`} />
+              {isSel && <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-200 font-semibold">Selected</span>}
               <div className="relative">
                 <div className="h-10 w-10 rounded-xl grid place-items-center hairline mb-3">
-                  <r.icon className="h-5 w-5 text-cyan-300" />
+                  <r.icon className={`h-5 w-5 ${isSel ? "text-cyan-200" : "text-cyan-300"}`} />
                 </div>
                 <div className="text-sm font-semibold">{r.name}</div>
                 <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{r.desc}</div>
@@ -79,7 +82,9 @@ function RolePage() {
               </div>
             </GlassCard>
           </motion.button>
-        ))}
+          );
+        })}
+
       </div>
       <div className="mt-6 flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">You can change this from Settings → User Roles at any time.</p>
