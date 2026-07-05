@@ -25,7 +25,7 @@ export const askCopilot = createServerFn({ method: "POST" })
       supabaseAdmin.from("cyber_telemetry").select("source, severity, message, created_at").order("created_at", { ascending: false }).limit(15),
     ]);
 
-    const context = {
+    const grounded = {
       recent_alerts: alerts.data ?? [],
       top_investigations: invs.data ?? [],
       recent_transactions: txs.data ?? [],
@@ -38,11 +38,12 @@ export const askCopilot = createServerFn({ method: "POST" })
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: system },
-        { role: "system", content: `LIVE TENANT DATA:\n${JSON.stringify(context)}` },
+        { role: "system", content: `LIVE TENANT DATA:\n${JSON.stringify(grounded)}` },
         { role: "user", content: data.prompt },
       ],
       temperature: 0.4,
     };
+
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
