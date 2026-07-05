@@ -1,29 +1,16 @@
-// Deterministic seed data generator for SentinelQ smoke tests.
+// Deterministic seed data generator for SentinelQ.
 //
-// Every row uses a stable v5-style UUID derived from a fixed namespace + key,
-// so re-running the seed is idempotent (ON CONFLICT DO UPDATE) and produces
-// byte-identical primary keys across environments. Timestamps are anchored to
-// SEED_ANCHOR (a fixed instant, NOT `now()`), and all PRNG calls go through a
-// mulberry32 stream seeded with a constant. Two smoke runs against a fresh
-// database → identical composite risk, identical investigation payload,
-// identical alert titles.
-//
-// Scenarios:
-//   - "baseline"  : quiet tenant, low-risk telemetry + tx (composite < 40)
-//   - "high_risk" : critical telemetry burst + $47,500 wire to RU
-//                   (composite must be >= 85 → BLOCKED + investigation + alert)
-//   - "reset"     : deletes everything tagged `seed:*` and returns
-//
-// The generator ONLY touches rows it owns (source starts with `seed:` or
-// merchant starts with `seed:`), so it is safe to run against a tenant that
-// also has live data.
+// Idempotent: re-running clears prior `seed:*`-tagged rows and re-inserts.
+// Produces enough data across every table for the dashboard, alerts,
+// investigations, telemetry, transactions, threat-intel, correlation, and
+// behaviour pages to look fully populated on first login.
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 const Input = z.object({
-  scenario: z.enum(["baseline", "high_risk", "reset"]).default("high_risk"),
+  scenario: z.enum(["baseline", "high_risk", "reset", "demo"]).default("demo"),
 });
 
 // Fixed anchor: 2026-01-01T12:00:00Z. All seeded rows are offset from this.
@@ -34,7 +21,6 @@ const SEED_NAMESPACE = "sentinelq-seed-v1";
 async function seedUuid(key: string): Promise<string> {
   const enc = new TextEncoder().encode(`${SEED_NAMESPACE}:${key}`);
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-1", enc));
-  // Force version 5 + RFC-4122 variant so Postgres accepts it as a valid uuid.
   hash[6] = (hash[6] & 0x0f) | 0x50;
   hash[8] = (hash[8] & 0x3f) | 0x80;
   const hex = Array.from(hash.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -55,151 +41,338 @@ function mulberry32(seed: number) {
 const pick = <T,>(rng: () => number, arr: readonly T[]) => arr[Math.floor(rng() * arr.length)];
 const iso = (offsetMinutes: number) => new Date(SEED_ANCHOR + offsetMinutes * 60_000).toISOString();
 
+// ---------- data pools ----------
+const COUNTRIES = ["US", "GB", "DE", "FR", "JP", "IN", "BR", "RU", "CN", "NG", "AE", "NL", "IR", "VN"] as const;
+const HIGH_RISK = ["RU", "CN", "NG", "AE", "IR", "VN"] as const;
+const CHANNELS = ["wire", "crypto", "card", "ach", "swift"] as const;
+const MERCHANTS = [
+  "Amazon", "Apple", "Uber", "Airbnb", "Shell", "Costco", "Walmart",
+  "Binance deposit", "Unknown NL beneficiary", "OFX FX transfer",
+  "Netflix", "Stripe", "Deliveroo", "Steam", "PayPal cashout",
+] as const;
+const SOURCES = ["EDR", "IAM", "VPN", "Firewall", "DNS", "Email", "Cloud", "Auth"] as const;
+const TELEM_MSGS = {
+  critical: [
+    "RedLine infostealer executed on endpoint",
+    "MFA fatigue: 14 push denials in 3 minutes",
+    "Impossible travel: London → Amsterdam in 4 min",
+    "Beaconing pattern to known C2 (jitter 30s)",
+    "Kerberoasting attempt on domain controller",
+    "Ransomware precursor: vssadmin delete shadows",
+  ],
+  high: [
+    "Suspicious PowerShell base64 payload",
+    "Unusual sudo escalation off-hours",
+    "OAuth consent to unverified 3rd-party app",
+    "Large outbound transfer to Tor exit node",
+    "Multiple failed logins from datacenter ASN",
+  ],
+  medium: [
+    "New device registered for MFA",
+    "GeoIP mismatch on login",
+    "Firewall block: inbound SMB scan",
+    "DNS request to newly-registered domain",
+  ],
+  low: ["Password changed", "Session refreshed from mobile", "Cloud storage share extended"],
+  info: ["Routine authentication event", "Scheduled backup completed", "Cert renewed"],
+} as const;
+const INVESTIGATIONS = [
+  { attack: "Account Takeover", cause: "Credential stuffing succeeded from residential proxy" },
+  { attack: "APP Fraud", cause: "Social-engineered wire to attacker-controlled account" },
+  { attack: "Insider Data Exfil", cause: "Analyst downloaded 8GB customer PII to personal cloud" },
+  { attack: "Ransomware Precursor", cause: "Cobalt Strike beacon on finance-team laptop" },
+  { attack: "BEC / Invoice Fraud", cause: "Spoofed CFO email redirecting AP payment" },
+  { attack: "Card-not-present Fraud", cause: "Enumeration attack against payment API" },
+];
+
 export const seedDeterministic = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => Input.parse(raw))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // ---- 1. Wipe prior seed rows (marker: merchant/source/email prefix "seed:") ----
-    const priorTxIds = (await supabaseAdmin.from("transactions").select("id").like("merchant", "seed:%")).data?.map((r) => r.id) ?? [];
+    // ---- 1. Wipe prior seed rows (markers) ----
+    const priorTxIds =
+      (await supabaseAdmin.from("transactions").select("id").like("merchant", "seed:%")).data?.map((r) => r.id) ?? [];
     const idFilter = priorTxIds.length ? priorTxIds : ["00000000-0000-0000-0000-000000000000"];
+    await supabaseAdmin.from("notifications").delete().like("body", "seed:%");
     await supabaseAdmin.from("alerts").delete().in("transaction_id", idFilter);
+    await supabaseAdmin.from("alerts").delete().like("source", "seed:%");
     await supabaseAdmin.from("ai_investigations").delete().in("transaction_id", idFilter);
     await supabaseAdmin.from("risk_scores").delete().in("transaction_id", idFilter);
     await supabaseAdmin.from("transactions").delete().like("merchant", "seed:%");
     await supabaseAdmin.from("cyber_telemetry").delete().like("source", "seed:%");
     await supabaseAdmin.from("iocs").delete().like("value", "seed:%");
     await supabaseAdmin.from("threat_intel").delete().like("name", "seed:%");
+    await supabaseAdmin.from("knowledge_edges").delete().eq("src_type", "seed");
+    await supabaseAdmin.from("quantum_assets").delete().like("asset", "seed:%");
+    await supabaseAdmin.from("sessions").delete().like("city", "seed:%");
+    await supabaseAdmin.from("devices").delete().like("fingerprint", "seed:%");
+    await supabaseAdmin.from("beneficiaries").delete().like("name", "seed:%");
     await supabaseAdmin.from("customers").delete().like("email", "seed+%@sentinelq.test");
 
     if (data.scenario === "reset") return { scenario: "reset", cleared: true };
 
-    // ---- 2. Fixed customers ----
-    const rng = mulberry32(data.scenario === "high_risk" ? 0xC0FFEE : 0xBADA55);
+    const rng = mulberry32(
+      data.scenario === "high_risk" ? 0xc0ffee : data.scenario === "baseline" ? 0xbada55 : 0x5eed01,
+    );
 
-    const customerA = {
-      id: await seedUuid("customer:a"),
-      full_name: "Jonathan Watson",
-      email: "seed+watson@sentinelq.test",
-      country: "GB",
-      segment: "Wealth",
-      risk_baseline: data.scenario === "high_risk" ? 55 : 15,
-      created_at: iso(-60 * 24 * 90),
-    };
-    const customerB = {
-      id: await seedUuid("customer:b"),
-      full_name: "Priya Ramanathan",
-      email: "seed+priya@sentinelq.test",
-      country: "IN",
-      segment: "Retail",
-      risk_baseline: 20,
-      created_at: iso(-60 * 24 * 30),
-    };
-    await supabaseAdmin.from("customers").upsert([customerA, customerB]);
+    // ---- 2. Customers ----
+    const customers = await Promise.all(
+      Array.from({ length: 8 }, async (_, i) => ({
+        id: await seedUuid(`customer:${i}`),
+        full_name: pick(rng, [
+          "Jonathan Watson", "Priya Ramanathan", "Marco Bianchi", "Aiko Tanaka",
+          "Sofia Alvarez", "Liam O'Connor", "Fatima Al-Zahra", "Chen Wei",
+        ]),
+        email: `seed+cust${i}@sentinelq.test`,
+        country: pick(rng, COUNTRIES),
+        segment: pick(rng, ["Retail", "Wealth", "SMB", "Corporate"]),
+        risk_baseline: 15 + Math.floor(rng() * 60),
+        created_at: iso(-60 * 24 * (30 + i * 15)),
+      })),
+    );
+    await supabaseAdmin.from("customers").upsert(customers);
 
-    // ---- 3. Threat intel + IOC (deterministic) ----
-    const threat = {
-      id: await seedUuid("threat:fin7"),
-      kind: "campaign",
-      name: "seed:FIN7-Wire-24Q4",
-      origin_country: "RU",
-      severity: "critical",
-      description: "Seeded threat campaign used by smoke tests.",
-      first_seen: iso(-60 * 24 * 14),
-    };
-    await supabaseAdmin.from("threat_intel").upsert(threat);
-    await supabaseAdmin.from("iocs").upsert({
-      id: await seedUuid("ioc:ip1"),
-      type: "IP",
-      value: "seed:185.220.101.44",
-      severity: "high",
-      threat_id: threat.id,
-      seen_count: 42,
-      last_seen: iso(-30),
-    });
+    // ---- 3. Threat intel + IOCs ----
+    const threats = await Promise.all(
+      [
+        { name: "seed:FIN7-Wire-24Q4", country: "RU", sev: "critical" },
+        { name: "seed:Scattered-Spider-2026", country: "US", sev: "high" },
+        { name: "seed:Lazarus-Crypto-Ops", country: "CN", sev: "critical" },
+        { name: "seed:LockBit-Reboot", country: "RU", sev: "high" },
+      ].map(async (t, i) => ({
+        id: await seedUuid(`threat:${i}`),
+        kind: "campaign",
+        name: t.name,
+        origin_country: t.country,
+        severity: t.sev,
+        description: `Seeded ${t.name} campaign tracked by SentinelQ.`,
+        first_seen: iso(-60 * 24 * (7 + i * 3)),
+      })),
+    );
+    await supabaseAdmin.from("threat_intel").upsert(threats);
 
-    // ---- 4. Telemetry burst ----
-    const telemetryCount = data.scenario === "high_risk" ? 12 : 6;
-    const telemetry = Array.from({ length: telemetryCount }, (_, i) => {
-      const severity = data.scenario === "high_risk"
-        ? (i < 3 ? "critical" : i < 7 ? "high" : "medium")
-        : pick(rng, ["low", "medium", "info"] as const);
+    const iocs = await Promise.all(
+      Array.from({ length: 12 }, async (_, i) => ({
+        id: await seedUuid(`ioc:${i}`),
+        type: pick(rng, ["IP", "domain", "hash", "url"] as const),
+        value: `seed:${pick(rng, ["185.220.101.44", "malicious.example.ru", "a1b2c3d4e5f6", "phish.co/login"] as const)}-${i}`,
+        severity: pick(rng, ["critical", "high", "medium"] as const),
+        threat_id: threats[i % threats.length].id,
+        seen_count: 10 + Math.floor(rng() * 200),
+        last_seen: iso(-i * 30),
+      })),
+    );
+    await supabaseAdmin.from("iocs").upsert(iocs);
+
+    // ---- 4. Telemetry (40 rows across severities) ----
+    const telemetry = Array.from({ length: 40 }, (_, i) => {
+      const sev = pick(
+        rng,
+        ["critical", "critical", "high", "high", "high", "medium", "medium", "low", "info"] as const,
+      );
+      const msg = pick(rng, TELEM_MSGS[sev]);
       return {
-        id: undefined as unknown as string, // let DB assign; telemetry is append-only
-        source: `seed:${pick(rng, ["EDR", "IAM", "VPN", "Firewall"] as const)}`,
-        severity,
-        user_ref: customerA.email,
-        device: `seed-dev-${i}`,
-        ip: "185.220.101.44",
-        message: data.scenario === "high_risk"
-          ? pick(rng, [
-              "RedLine infostealer executed on endpoint",
-              "MFA fatigue: 14 push denials in 3 minutes",
-              "Impossible travel: London → Amsterdam in 4 min",
-              "Beaconing pattern to known C2 (jitter 30s)",
-            ] as const)
-          : "Routine authentication event",
-        risk_score: severity === "critical" ? 95 : severity === "high" ? 78 : 30,
+        source: `seed:${pick(rng, SOURCES)}`,
+        severity: sev,
+        user_ref: pick(rng, customers).email,
+        device: `seed-dev-${Math.floor(rng() * 20)}`,
+        ip: `185.220.101.${20 + i}`,
+        message: msg,
+        risk_score: sev === "critical" ? 90 + Math.floor(rng() * 9) : sev === "high" ? 70 + Math.floor(rng() * 15) : sev === "medium" ? 40 + Math.floor(rng() * 20) : 10 + Math.floor(rng() * 20),
         metadata: { seeded: true, scenario: data.scenario, index: i },
-        created_at: iso(-i * 2),
+        created_at: iso(-i * 7),
       };
     });
-    // strip undefined id so DB generates a fresh one (idempotent because we deleted first)
-    await supabaseAdmin.from("cyber_telemetry").insert(telemetry.map(({ id: _id, ...rest }) => rest));
+    await supabaseAdmin.from("cyber_telemetry").insert(telemetry);
 
-    // ---- 5. Deterministic transactions ----
-    const txs = data.scenario === "high_risk"
-      ? [
-          {
-            id: await seedUuid("tx:high"),
-            customer_id: customerA.id,
-            amount: 47500,
-            currency: "USD",
-            channel: "wire",
-            merchant: "seed:Unknown NL beneficiary",
-            country: "RU",
-            status: "pending",
-            created_at: iso(0),
-          },
-          {
-            id: await seedUuid("tx:mid"),
-            customer_id: customerA.id,
-            amount: 8200,
-            currency: "USD",
-            channel: "crypto",
-            merchant: "seed:Binance deposit",
-            country: "AE",
-            status: "pending",
-            created_at: iso(-5),
-          },
-        ]
-      : [
-          {
-            id: await seedUuid("tx:baseline-1"),
-            customer_id: customerB.id,
-            amount: 120,
-            currency: "USD",
-            channel: "card",
-            merchant: "seed:Amazon",
-            country: "US",
-            status: "approved",
-            created_at: iso(-2),
-          },
-        ];
-    await supabaseAdmin.from("transactions").upsert(txs);
+    // ---- 5. Transactions (30) + risk_scores + investigations + alerts ----
+    const txRows = await Promise.all(
+      Array.from({ length: 30 }, async (_, i) => {
+        const cust = customers[i % customers.length];
+        const isHighRisk = i < 8;
+        const amount = isHighRisk ? 15000 + Math.floor(rng() * 40000) : 50 + Math.floor(rng() * 4000);
+        const country = isHighRisk ? pick(rng, HIGH_RISK) : pick(rng, COUNTRIES);
+        const channel = pick(rng, CHANNELS);
+        const risk = isHighRisk ? 70 + Math.floor(rng() * 29) : Math.floor(rng() * 55);
+        const status = risk >= 80 ? "blocked" : risk >= 60 ? "pending" : "approved";
+        return {
+          id: await seedUuid(`tx:${i}`),
+          customer_id: cust.id,
+          amount,
+          currency: "USD",
+          channel,
+          merchant: `seed:${pick(rng, MERCHANTS)}`,
+          country,
+          status,
+          risk_score: risk,
+          created_at: iso(-i * 15),
+        };
+      }),
+    );
+    await supabaseAdmin.from("transactions").upsert(txRows);
+
+    // risk_scores for every tx
+    const riskScoreRows = txRows.map((t) => ({
+      transaction_id: t.id,
+      customer_id: t.customer_id,
+      composite: t.risk_score,
+      contributors: [
+        { name: `Amount $${t.amount.toLocaleString()}`, weight: Math.min(25, Math.round(t.amount / 2000)) },
+        { name: `Country ${t.country}`, weight: HIGH_RISK.includes(t.country as (typeof HIGH_RISK)[number]) ? 15 : 3 },
+        { name: `Channel ${t.channel}`, weight: t.channel === "crypto" ? 12 : t.channel === "wire" ? 8 : 2 },
+      ],
+    }));
+    await supabaseAdmin.from("risk_scores").insert(riskScoreRows);
+
+    // Investigations for top-risk txs
+    const invRows = await Promise.all(
+      txRows
+        .filter((t) => (t.risk_score ?? 0) >= 60)
+        .slice(0, 8)
+        .map(async (t, i) => {
+          const meta = INVESTIGATIONS[i % INVESTIGATIONS.length];
+          const contrib = riskScoreRows.find((r) => r.transaction_id === t.id)?.contributors ?? [];
+          return {
+            id: await seedUuid(`inv:${i}`),
+            transaction_id: t.id,
+            customer_id: t.customer_id,
+            title: `Risk ${t.risk_score}: ${t.channel} to ${t.country}`,
+            confidence: Math.min(99, (t.risk_score ?? 0) + 3),
+            attack_type: meta.attack,
+            business_impact: t.amount,
+            root_cause: meta.cause,
+            evidence: contrib.map((c) => ({ ts: t.created_at, source: "correlation", event: c.name, weight: c.weight })),
+            risk_factors: contrib.map((c) => c.name),
+            recommended_actions:
+              (t.risk_score ?? 0) >= 85
+                ? ["Freeze account for 24h", "Force credential reset", "Notify customer via secondary channel", "File SAR"]
+                : ["Manual analyst review", "Enrich with device history", "Contact customer for confirmation"],
+            compliance: (t.risk_score ?? 0) >= 85 ? ["PSD2 SCA review", "AML SAR filing", "DORA incident report"] : ["Manual review"],
+            status: "open",
+          };
+        }),
+    );
+    if (invRows.length) await supabaseAdmin.from("ai_investigations").upsert(invRows);
+
+    // Alerts across every severity + status bucket
+    const alertRows = await Promise.all(
+      Array.from({ length: 24 }, async (_, i) => {
+        const t = txRows[i % txRows.length];
+        const inv = invRows[i % Math.max(1, invRows.length)];
+        const severity = pick(rng, ["critical", "critical", "high", "high", "medium", "medium", "low"] as const);
+        const status = i < 14 ? "open" : i < 20 ? "acknowledged" : "resolved";
+        return {
+          id: await seedUuid(`alert:${i}`),
+          transaction_id: t.id,
+          customer_id: t.customer_id,
+          investigation_id: inv?.id ?? null,
+          severity,
+          title: `${severity.toUpperCase()}: ${t.channel} $${t.amount.toLocaleString()} to ${t.country}`,
+          source: "seed:correlation-engine",
+          status,
+          sla_minutes: severity === "critical" ? 15 : severity === "high" ? 30 : 60,
+          created_at: iso(-i * 20),
+          updated_at: iso(-i * 20 + 5),
+        };
+      }),
+    );
+    await supabaseAdmin.from("alerts").upsert(alertRows);
+
+    // Notifications (analyst inbox)
+    const notifRows = alertRows.slice(0, 8).map((a) => ({
+      title: a.severity === "critical" ? "Critical alert" : "New alert",
+      body: `seed:${a.title}`,
+      severity: a.severity,
+    }));
+    await supabaseAdmin.from("notifications").insert(notifRows);
+
+    // Devices + sessions + beneficiaries + quantum + knowledge_edges (light)
+    const devices = await Promise.all(
+      customers.slice(0, 6).map(async (c, i) => ({
+        id: await seedUuid(`device:${i}`),
+        customer_id: c.id,
+        fingerprint: `seed:fp-${i}`,
+        os: pick(rng, ["iOS", "Android", "macOS", "Windows"]),
+        browser: pick(rng, ["Safari", "Chrome", "Firefox", "Edge"]),
+        trusted: rng() > 0.4,
+        last_seen: iso(-i * 30),
+      })),
+    );
+    await supabaseAdmin.from("devices").upsert(devices);
+
+    const sessions = await Promise.all(
+      customers.slice(0, 6).map(async (c, i) => ({
+        id: await seedUuid(`session:${i}`),
+        customer_id: c.id,
+        device_id: devices[i]?.id ?? null,
+        ip: `203.0.113.${i}`,
+        country: c.country,
+        city: `seed:city-${i}`,
+        is_vpn: rng() > 0.7,
+        is_tor: rng() > 0.9,
+        started_at: iso(-i * 60),
+      })),
+    );
+    await supabaseAdmin.from("sessions").upsert(sessions);
+
+    const beneficiaries = await Promise.all(
+      customers.slice(0, 4).map(async (c, i) => ({
+        id: await seedUuid(`ben:${i}`),
+        customer_id: c.id,
+        name: `seed:Beneficiary ${i}`,
+        iban: `NL${20 + i}RABO0${1000000 + i}`,
+        country: pick(rng, HIGH_RISK),
+        trusted: false,
+      })),
+    );
+    await supabaseAdmin.from("beneficiaries").upsert(beneficiaries);
+
+    const quantum = await Promise.all(
+      [
+        ["RSA-2048 signing key", "RSA", 2048, "TLS 1.2", 90, "pending"],
+        ["TLS 1.2 endpoint", "ECDHE-RSA", 256, "TLS 1.2", 70, "in-progress"],
+        ["Hybrid Kyber-1024", "Kyber-1024+X25519", 1024, "TLS 1.3", 20, "complete"],
+        ["Legacy 3DES vault", "3DES", 168, "n/a", 95, "pending"],
+        ["Dilithium roadmap slot", "Dilithium-3", 3072, "TLS 1.3", 40, "planned"],
+      ].map(async ([asset, algo, keySize, tls, sens, status], i) => ({
+        id: await seedUuid(`quantum:${i}`),
+        asset: `seed:${asset as string}`,
+        algo: algo as string,
+        key_size: keySize as number,
+        tls_version: tls as string,
+        sensitivity: sens as number,
+        migration_status: status as string,
+        expires_at: iso(60 * 24 * 365 * (i + 1)),
+      })),
+    );
+    await supabaseAdmin.from("quantum_assets").upsert(quantum);
+
+    const edges = await Promise.all(
+      Array.from({ length: 10 }, async (_, i) => ({
+        id: await seedUuid(`edge:${i}`),
+        src_type: "seed",
+        src_id: customers[i % customers.length].id,
+        dst_type: pick(rng, ["transaction", "device", "session"]),
+        dst_id: txRows[i % txRows.length].id,
+        weight: Math.round(rng() * 100),
+      })),
+    );
+    await supabaseAdmin.from("knowledge_edges").upsert(edges);
+
 
     return {
       scenario: data.scenario,
       anchor: new Date(SEED_ANCHOR).toISOString(),
-      customers: [customerA.id, customerB.id],
-      transactions: txs.map((t) => ({ id: t.id, amount: t.amount, country: t.country, channel: t.channel })),
+      customers: customers.length,
+      transactions: txRows.map((t) => ({ id: t.id, amount: t.amount, country: t.country, channel: t.channel })),
+      alerts: alertRows.length,
+      investigations: invRows.length,
       telemetry_count: telemetry.length,
-      // Expected composite risk when correlateTransaction is called on the
-      // high-risk transaction with the deterministic scoring path:
-      //   amount weight (min 25) + country RU (15) + wire >5k (10)
-      //   + baseline 55 (8) + critical telem (12) + high telem>2 (8)
-      //   + baseline/5 (11) = 89  →  BLOCKED + critical alert.
-      expected_high_risk_composite: data.scenario === "high_risk" ? 89 : null,
+      iocs: iocs.length,
+      threats: threats.length,
+      quantum: quantum.length,
+      expected_high_risk_composite: null,
     };
   });
