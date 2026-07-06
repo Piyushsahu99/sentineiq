@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Command, Search, Sparkles, Sun, Moon, LogOut, User2, Settings2 } from "lucide-react";
+import { Bell, Command, Search, Sparkles, Sun, Moon, LogOut, User2, Settings2, Menu } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { session } from "@/lib/session";
 import { toast } from "sonner";
