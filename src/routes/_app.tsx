@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Sidebar } from "@/components/shell/sidebar";
+import { Sidebar, MobileSidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { CopilotDock } from "@/components/shell/copilot-dock";
