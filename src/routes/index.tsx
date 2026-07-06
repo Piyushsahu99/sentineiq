@@ -68,23 +68,23 @@ function Landing() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-[ticker_6s_linear_infinite] opacity-60" />
 
       {/* Nav */}
-      <header className="relative z-20 px-6 md:px-10 py-5 flex items-center justify-between">
-        <Logo />
-        <nav className="hidden md:flex items-center gap-7 text-xs text-muted-foreground">
+      <header className="relative z-20 px-4 sm:px-6 md:px-10 py-4 sm:py-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0"><Logo /></div>
+        <nav className="hidden md:flex items-center gap-7 text-xs text-muted-foreground justify-self-center">
           <a href="#platform" className="hover:text-foreground transition">Platform</a>
           <a href="#modules" className="hover:text-foreground transition">Modules</a>
           <a href="#workflow" className="hover:text-foreground transition">Workflow</a>
           <a href="#faq" className="hover:text-foreground transition">FAQ</a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {authed ? (
-            <button onClick={ctaEnter} className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-4 py-2 hover:brightness-110">
+            <button onClick={ctaEnter} className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-3 sm:px-4 py-2 hover:brightness-110 whitespace-nowrap">
               Open console
             </button>
           ) : (
             <>
-              <Link to="/auth/login" className="text-xs px-3 py-2 rounded-lg hairline hover:bg-white/6">Sign in</Link>
-              <Link to="/auth/login" className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-4 py-2 hover:brightness-110">
+              <Link to="/auth/login" className="hidden xs:inline-flex text-xs px-3 py-2 rounded-lg hairline hover:bg-white/6">Sign in</Link>
+              <Link to="/auth/login" className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-3 sm:px-4 py-2 hover:brightness-110 whitespace-nowrap">
                 Request access
               </Link>
             </>
