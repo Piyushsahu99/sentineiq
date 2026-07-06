@@ -127,7 +127,7 @@ export function Topbar({ onCommand, onCopilot, onMenu }: { onCommand: () => void
         </Popover>
 
         <button
-          className="h-9 w-9 grid place-items-center rounded-lg hairline hover:bg-white/6"
+          className="hidden sm:grid h-9 w-9 place-items-center rounded-lg hairline hover:bg-white/6"
           onClick={() => toast.info("Theme locked to dark for enterprise consistency.")}
           aria-label="Toggle theme"
         >
@@ -137,12 +137,12 @@ export function Topbar({ onCommand, onCopilot, onMenu }: { onCommand: () => void
 
         <Popover>
           <PopoverTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 pl-1 pr-3 py-1">
+            <button className="flex shrink-0 items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 pl-1 pr-2 sm:pr-3 py-1">
               <div className="h-7 w-7 rounded-md bg-gradient-to-br from-cyan-400 to-violet-500 grid place-items-center text-[11px] font-bold text-black">
                 {session.getEmail().slice(0,2).toUpperCase()}
               </div>
-              <div className="text-left leading-tight">
-                <div className="text-xs font-semibold">{session.getEmail().split("@")[0]}</div>
+              <div className="hidden sm:block text-left leading-tight">
+                <div className="text-xs font-semibold max-w-[120px] truncate">{session.getEmail().split("@")[0]}</div>
                 <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{session.getRole() ?? "SOC"}</div>
               </div>
             </button>
