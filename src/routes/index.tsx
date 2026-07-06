@@ -93,12 +93,12 @@ function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="relative z-10 px-6 md:px-10 pt-14 pb-24 max-w-7xl mx-auto">
+      <section className="relative z-10 px-4 sm:px-6 md:px-10 pt-10 sm:pt-14 pb-20 sm:pb-24 max-w-7xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="inline-flex items-center gap-2 rounded-full hairline bg-white/3 px-3 py-1 text-[10px] uppercase tracking-widest text-cyan-300">
             <Sparkles className="h-3 w-3" /> Gemini-powered · Live correlation engine
           </div>
-          <h1 className="mt-6 text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] max-w-4xl">
+          <h1 className="mt-6 text-3xl sm:text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] max-w-4xl">
             The unified <span className="text-gradient-cyber">cyber &amp; fraud</span> intelligence platform for modern banks.
           </h1>
           <p className="mt-5 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
