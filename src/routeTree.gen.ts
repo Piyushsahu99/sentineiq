@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -31,6 +32,11 @@ import { Route as AppBehaviorRouteImport } from './routes/_app.behavior'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -140,6 +146,7 @@ const LovableEmailQueueProcessRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/alerts': typeof AppAlertsRoute
   '/behavior': typeof AppBehaviorRoute
   '/correlation': typeof AppCorrelationRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/alerts': typeof AppAlertsRoute
   '/behavior': typeof AppBehaviorRoute
   '/correlation': typeof AppCorrelationRoute
@@ -186,6 +194,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/alerts': typeof AppAlertsRoute
   '/_app/behavior': typeof AppBehaviorRoute
   '/_app/correlation': typeof AppCorrelationRoute
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/sitemap.xml'
     | '/alerts'
     | '/behavior'
     | '/correlation'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/sitemap.xml'
     | '/alerts'
     | '/behavior'
     | '/correlation'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/sitemap.xml'
     | '/_app/alerts'
     | '/_app/behavior'
     | '/_app/correlation'
@@ -279,11 +291,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -488,6 +508,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
