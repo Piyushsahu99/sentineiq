@@ -68,23 +68,23 @@ function Landing() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-[ticker_6s_linear_infinite] opacity-60" />
 
       {/* Nav */}
-      <header className="relative z-20 px-6 md:px-10 py-5 flex items-center justify-between">
-        <Logo />
-        <nav className="hidden md:flex items-center gap-7 text-xs text-muted-foreground">
+      <header className="relative z-20 px-4 sm:px-6 md:px-10 py-4 sm:py-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0"><Logo /></div>
+        <nav className="hidden md:flex items-center gap-7 text-xs text-muted-foreground justify-self-center">
           <a href="#platform" className="hover:text-foreground transition">Platform</a>
           <a href="#modules" className="hover:text-foreground transition">Modules</a>
           <a href="#workflow" className="hover:text-foreground transition">Workflow</a>
           <a href="#faq" className="hover:text-foreground transition">FAQ</a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {authed ? (
-            <button onClick={ctaEnter} className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-4 py-2 hover:brightness-110">
+            <button onClick={ctaEnter} className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-3 sm:px-4 py-2 hover:brightness-110 whitespace-nowrap">
               Open console
             </button>
           ) : (
             <>
-              <Link to="/auth/login" className="text-xs px-3 py-2 rounded-lg hairline hover:bg-white/6">Sign in</Link>
-              <Link to="/auth/login" className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-4 py-2 hover:brightness-110">
+              <Link to="/auth/login" className="text-xs px-2.5 sm:px-3 py-2 rounded-lg hairline hover:bg-white/6">Sign in</Link>
+              <Link to="/auth/login" className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-3 sm:px-4 py-2 hover:brightness-110 whitespace-nowrap">
                 Request access
               </Link>
             </>
@@ -93,12 +93,12 @@ function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="relative z-10 px-6 md:px-10 pt-14 pb-24 max-w-7xl mx-auto">
+      <section className="relative z-10 px-4 sm:px-6 md:px-10 pt-10 sm:pt-14 pb-20 sm:pb-24 max-w-7xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="inline-flex items-center gap-2 rounded-full hairline bg-white/3 px-3 py-1 text-[10px] uppercase tracking-widest text-cyan-300">
             <Sparkles className="h-3 w-3" /> Gemini-powered · Live correlation engine
           </div>
-          <h1 className="mt-6 text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] max-w-4xl">
+          <h1 className="mt-6 text-3xl sm:text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] max-w-4xl">
             The unified <span className="text-gradient-cyber">cyber &amp; fraud</span> intelligence platform for modern banks.
           </h1>
           <p className="mt-5 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
@@ -160,7 +160,7 @@ function Landing() {
       </section>
 
       {/* Platform pillars */}
-      <section id="platform" className="relative z-10 px-6 md:px-10 py-20 max-w-7xl mx-auto">
+      <section id="platform" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-7xl mx-auto">
         <div className="max-w-2xl">
           <div className="text-[10px] uppercase tracking-widest text-cyan-300">The platform</div>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold tracking-tight">Correlation, not silos.</h2>
@@ -187,7 +187,7 @@ function Landing() {
       </section>
 
       {/* Modules */}
-      <section id="modules" className="relative z-10 px-6 md:px-10 py-20 max-w-7xl mx-auto">
+      <section id="modules" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-cyan-300">Modules</div>
@@ -221,7 +221,7 @@ function Landing() {
       </section>
 
       {/* Workflow */}
-      <section id="workflow" className="relative z-10 px-6 md:px-10 py-20 max-w-7xl mx-auto">
+      <section id="workflow" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-7xl mx-auto">
         <div className="max-w-2xl">
           <div className="text-[10px] uppercase tracking-widest text-cyan-300">Workflow</div>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold tracking-tight">From raw signal to blocked wire.</h2>
@@ -244,7 +244,7 @@ function Landing() {
       </section>
 
       {/* Trust bar */}
-      <section className="relative z-10 px-6 md:px-10 py-14 max-w-7xl mx-auto">
+      <section className="relative z-10 px-4 sm:px-6 md:px-10 py-14 max-w-7xl mx-auto">
         <GlassCard className="p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-6 justify-between">
             <div>
@@ -261,7 +261,7 @@ function Landing() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="relative z-10 px-6 md:px-10 py-20 max-w-4xl mx-auto">
+      <section id="faq" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-4xl mx-auto">
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-widest text-cyan-300">FAQ</div>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold tracking-tight">Questions from CISOs, answered.</h2>
@@ -273,7 +273,7 @@ function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="relative z-10 px-6 md:px-10 py-20 max-w-5xl mx-auto text-center">
+      <section className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-5xl mx-auto text-center">
         <div className="relative rounded-3xl hairline glass p-10 overflow-hidden">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[600px] bg-gradient-to-b from-cyan-500/25 to-transparent blur-3xl" />
           <div className="relative">
@@ -297,7 +297,7 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="relative z-10 px-6 md:px-10 py-8 border-t border-white/6 flex flex-wrap items-center justify-between gap-4 text-[10px] text-muted-foreground/70">
+      <footer className="relative z-10 px-4 sm:px-6 md:px-10 py-8 border-t border-white/6 flex flex-wrap items-center justify-between gap-4 text-[10px] text-muted-foreground/70">
         <div className="flex items-center gap-3"><Logo /> <span>© 2026 SentinelQ · Enterprise Banking Cybersecurity</span></div>
         <div className="flex gap-4"><span>Privacy</span><span>Security</span><span>DPA</span><span>Sub-processors</span></div>
       </footer>

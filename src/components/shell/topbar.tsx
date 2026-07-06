@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Command, Search, Sparkles, Sun, Moon, LogOut, User2, Settings2 } from "lucide-react";
+import { Bell, Command, Search, Sparkles, Sun, Moon, LogOut, User2, Settings2, Menu } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { session } from "@/lib/session";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ const initialNotifs = [
   { id: 5, title: "Quantum policy review due", detail: "RSA-2048 deprecation window in 30d", severity: "medium" as Severity, ts: Date.now() - 3 * 3600_000 },
 ];
 
-export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopilot: () => void }) {
+export function Topbar({ onCommand, onCopilot, onMenu }: { onCommand: () => void; onCopilot: () => void; onMenu?: () => void }) {
   const nav = useNavigate();
   const [notifs, setNotifs] = useState(initialNotifs);
   const [live, setLive] = useState(true);
@@ -42,13 +42,25 @@ export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopi
 
   return (
     <div className="sticky top-0 z-30 h-16 border-b border-white/6 bg-background/60 backdrop-blur-xl">
-      <div className="h-full flex items-center gap-3 px-6">
+      <div className="h-full flex items-center gap-2 sm:gap-3 px-3 sm:px-6">
+        {onMenu && (
+          <button
+            onClick={onMenu}
+            aria-label="Open navigation"
+            className="md:hidden h-9 w-9 shrink-0 grid place-items-center rounded-lg hairline hover:bg-white/6"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        )}
         <button
           onClick={onCommand}
-          className="group flex items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 px-3 py-1.5 text-sm text-muted-foreground w-full max-w-sm transition"
+          className="group flex min-w-0 items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 px-3 py-1.5 text-sm text-muted-foreground w-full max-w-sm transition"
         >
-          <Search className="h-4 w-4" />
-          <span className="flex-1 text-left">Search alerts, customers, IPs, IOCs…</span>
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="flex-1 min-w-0 truncate text-left">
+            <span className="hidden sm:inline">Search alerts, customers, IPs, IOCs…</span>
+            <span className="sm:hidden">Search…</span>
+          </span>
           <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
             <Command className="h-3 w-3" /> K
           </kbd>
@@ -115,7 +127,7 @@ export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopi
         </Popover>
 
         <button
-          className="h-9 w-9 grid place-items-center rounded-lg hairline hover:bg-white/6"
+          className="hidden sm:grid h-9 w-9 place-items-center rounded-lg hairline hover:bg-white/6"
           onClick={() => toast.info("Theme locked to dark for enterprise consistency.")}
           aria-label="Toggle theme"
         >
@@ -125,12 +137,12 @@ export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopi
 
         <Popover>
           <PopoverTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 pl-1 pr-3 py-1">
+            <button className="flex shrink-0 items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 pl-1 pr-2 sm:pr-3 py-1">
               <div className="h-7 w-7 rounded-md bg-gradient-to-br from-cyan-400 to-violet-500 grid place-items-center text-[11px] font-bold text-black">
                 {session.getEmail().slice(0,2).toUpperCase()}
               </div>
-              <div className="text-left leading-tight">
-                <div className="text-xs font-semibold">{session.getEmail().split("@")[0]}</div>
+              <div className="hidden sm:block text-left leading-tight">
+                <div className="text-xs font-semibold max-w-[120px] truncate">{session.getEmail().split("@")[0]}</div>
                 <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{session.getRole() ?? "SOC"}</div>
               </div>
             </button>
