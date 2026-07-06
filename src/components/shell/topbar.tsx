@@ -42,13 +42,25 @@ export function Topbar({ onCommand, onCopilot, onMenu }: { onCommand: () => void
 
   return (
     <div className="sticky top-0 z-30 h-16 border-b border-white/6 bg-background/60 backdrop-blur-xl">
-      <div className="h-full flex items-center gap-3 px-6">
+      <div className="h-full flex items-center gap-2 sm:gap-3 px-3 sm:px-6">
+        {onMenu && (
+          <button
+            onClick={onMenu}
+            aria-label="Open navigation"
+            className="md:hidden h-9 w-9 shrink-0 grid place-items-center rounded-lg hairline hover:bg-white/6"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        )}
         <button
           onClick={onCommand}
-          className="group flex items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 px-3 py-1.5 text-sm text-muted-foreground w-full max-w-sm transition"
+          className="group flex min-w-0 items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 px-3 py-1.5 text-sm text-muted-foreground w-full max-w-sm transition"
         >
-          <Search className="h-4 w-4" />
-          <span className="flex-1 text-left">Search alerts, customers, IPs, IOCs…</span>
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="flex-1 min-w-0 truncate text-left">
+            <span className="hidden sm:inline">Search alerts, customers, IPs, IOCs…</span>
+            <span className="sm:hidden">Search…</span>
+          </span>
           <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
             <Command className="h-3 w-3" /> K
           </kbd>
