@@ -16,6 +16,7 @@ function AppLayout() {
   const nav = useNavigate();
   const [cmd, setCmd] = useState(false);
   const [copilot, setCopilot] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
   const [seed, setSeed] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
