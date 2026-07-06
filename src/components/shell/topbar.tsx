@@ -17,7 +17,7 @@ const initialNotifs = [
   { id: 5, title: "Quantum policy review due", detail: "RSA-2048 deprecation window in 30d", severity: "medium" as Severity, ts: Date.now() - 3 * 3600_000 },
 ];
 
-export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopilot: () => void }) {
+export function Topbar({ onCommand, onCopilot, onMenu }: { onCommand: () => void; onCopilot: () => void; onMenu?: () => void }) {
   const nav = useNavigate();
   const [notifs, setNotifs] = useState(initialNotifs);
   const [live, setLive] = useState(true);
