@@ -83,7 +83,7 @@ function Landing() {
             </button>
           ) : (
             <>
-              <Link to="/auth/login" className="hidden xs:inline-flex text-xs px-3 py-2 rounded-lg hairline hover:bg-white/6">Sign in</Link>
+              <Link to="/auth/login" className="text-xs px-2.5 sm:px-3 py-2 rounded-lg hairline hover:bg-white/6">Sign in</Link>
               <Link to="/auth/login" className="text-xs rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold px-3 sm:px-4 py-2 hover:brightness-110 whitespace-nowrap">
                 Request access
               </Link>
