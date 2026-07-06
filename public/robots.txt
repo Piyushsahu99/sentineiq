@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /lovable/
+Disallow: /auth/
+
+Sitemap: https://sentinel-q.today/sitemap.xml
