@@ -324,7 +324,7 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: "How is customer PII protected?",
-    a: "PII is minimised at ingest, tokenised at rest, and never sent to any external model provider. The AI copilot uses tenant-scoped context via the Lovable AI Gateway with a strict no-retention policy. All access is audited and RLS-enforced per role: SOC, fraud, risk, and executive.",
+    a: "PII is minimised at ingest, tokenised at rest, and never sent to any external model provider. The AI copilot uses tenant-scoped context with a strict no-retention policy. All access is audited and RLS-enforced per role: SOC, fraud, risk, and executive.",
   },
   {
     q: "What compliance frameworks are covered?",
