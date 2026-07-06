@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/sq/logo";
 import { session } from "@/lib/session";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const nav = [
   { section: "Operations", items: [
@@ -33,21 +34,14 @@ const nav = [
   ]},
 ] as const;
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const [, tick] = useState(0);
   useEffect(() => session.subscribe(() => tick((n) => n + 1)), []);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const role = session.getRole();
 
-
   return (
-    <aside
-      className={cn(
-        "flex flex-col h-screen sticky top-0 shrink-0 border-r border-white/6 bg-sidebar/70 backdrop-blur-xl transition-[width] duration-300",
-        collapsed ? "w-[68px]" : "w-[248px]",
-      )}
-    >
+    <>
       <div className={cn("flex items-center h-16 px-4 border-b border-white/6", collapsed && "justify-center px-2")}>
         <Logo showWord={!collapsed} />
       </div>
@@ -68,6 +62,7 @@ export function Sidebar() {
                   <Link
                     key={item.to}
                     to={item.to}
+                    onClick={onNavigate}
                     className={cn(
                       "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                       active
@@ -116,14 +111,41 @@ export function Sidebar() {
           <Shield className="h-4 w-4 text-emerald-400" />
         )}
       </div>
+    </>
+  );
+}
 
+export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <aside
+      className={cn(
+        "hidden md:flex flex-col h-screen sticky top-0 shrink-0 border-r border-white/6 bg-sidebar/70 backdrop-blur-xl transition-[width] duration-300 relative",
+        collapsed ? "w-[68px]" : "w-[248px]",
+      )}
+    >
+      <SidebarBody collapsed={collapsed} />
       <button
         onClick={() => setCollapsed((v) => !v)}
-        className="absolute -right-3 top-16 h-6 w-6 grid place-items-center rounded-full glass-strong text-muted-foreground hover:text-foreground"
+        className="absolute -right-3 top-16 h-6 w-6 grid place-items-center rounded-full glass-strong text-muted-foreground hover:text-foreground z-10"
         aria-label="Toggle sidebar"
       >
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
       </button>
     </aside>
+  );
+}
+
+export function MobileSidebar({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="left"
+        className="w-[280px] p-0 border-white/6 bg-sidebar/95 backdrop-blur-xl flex flex-col"
+      >
+        <SidebarBody collapsed={false} onNavigate={() => onOpenChange(false)} />
+      </SheetContent>
+    </Sheet>
   );
 }
