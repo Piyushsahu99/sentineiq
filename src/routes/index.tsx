@@ -13,16 +13,33 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "SentinelQ — AI-Powered Banking Cybersecurity & Fraud Correlation" },
-      { name: "description", content: "SentinelQ unifies cyber telemetry, fraud signals, behavioral analytics, and post-quantum risk into one enterprise-grade platform for banks." },
-      { property: "og:title", content: "SentinelQ — Banking Cyber AI" },
-      { property: "og:description", content: "Correlate cyber, fraud, and quantum risk in real time. Built for SOC, fraud, risk, and executive teams." },
+      { title: "SentinelQ — Banking Cyber AI & Fraud Correlation" },
+      { name: "description", content: "Correlate cyber telemetry, fraud, behavioral analytics, and post-quantum risk in real time — for SOC, fraud, risk, and executive teams." },
+      { property: "og:title", content: "SentinelQ — Banking Cyber AI & Fraud Correlation" },
+      { property: "og:description", content: "Correlate cyber, fraud, and quantum risk in real time. Built for SOC, fraud, risk, and executive teams at modern banks." },
+      { property: "og:url", content: "https://sentinel-q.today/" },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c8dd4fc7-2143-40e0-b1f3-e97ca18b5270" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c8dd4fc7-2143-40e0-b1f3-e97ca18b5270" },
     ],
+    links: [{ rel: "canonical", href: "https://sentinel-q.today/" }],
+    scripts: [{
+      type: "application/ld+json",
+      children: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: FAQ_ITEMS.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      }),
+    }],
   }),
   component: Landing,
 });
+
 
 function Landing() {
   const nav = useNavigate();

@@ -1,0 +1,9 @@
+# SentinelQ
+
+> Unified cyber and fraud intelligence platform for modern banks. Correlates cyber telemetry, transaction fraud, behavioral analytics, threat intel, and post-quantum risk in real time.
+
+SentinelQ sits above your SIEM and joins cyber events with core-banking transactions, behavioral baselines, threat intel, and quantum risk into a single correlated decision — designed for SOC, fraud, risk, and executive teams.
+
+## Pages
+
+- [Home](/): Product overview, platform pillars, modules, workflow, and FAQ.

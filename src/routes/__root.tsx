@@ -73,17 +73,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SentinelQ — AI-Powered Banking Cybersecurity & Fraud Correlation" },
-      { name: "description", content: "SentinelQ unifies cyber telemetry, fraud signals, behavioral analytics, and post-quantum risk into one enterprise-grade platform for banks." },
+      { title: "SentinelQ — Banking Cyber AI & Fraud Correlation" },
+      { name: "description", content: "SentinelQ unifies cyber telemetry, fraud, behavioral analytics, and post-quantum risk into one platform for banks." },
       { name: "author", content: "SentinelQ" },
-      { property: "og:title", content: "SentinelQ — AI-Powered Banking Cybersecurity & Fraud Correlation" },
-      { property: "og:description", content: "SentinelQ unifies cyber telemetry, fraud signals, behavioral analytics, and post-quantum risk into one enterprise-grade platform for banks." },
+      { property: "og:site_name", content: "SentinelQ" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "SentinelQ — AI-Powered Banking Cybersecurity & Fraud Correlation" },
-      { name: "twitter:description", content: "SentinelQ unifies cyber telemetry, fraud signals, behavioral analytics, and post-quantum risk into one enterprise-grade platform for banks." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c8dd4fc7-2143-40e0-b1f3-e97ca18b5270" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c8dd4fc7-2143-40e0-b1f3-e97ca18b5270" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -92,12 +87,34 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "SentinelQ",
+          url: "https://sentinel-q.today",
+          description: "Unified cyber and fraud intelligence platform for modern banks.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "SentinelQ",
+          url: "https://sentinel-q.today",
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
+
 
 function RootShell({ children }: { children: ReactNode }) {
   return (

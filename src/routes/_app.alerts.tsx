@@ -10,8 +10,20 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/alerts")({
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Alerts — SentinelQ" },
+      { name: "description", content: "SOC triage queue for correlated cyber and fraud alerts." },
+      { property: "og:title", content: "Alerts — SentinelQ" },
+      { property: "og:description", content: "SOC triage queue for correlated cyber and fraud alerts." },
+      { property: "og:url", content: "https://sentinel-q.today/alerts" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://sentinel-q.today/alerts" }],
+  }),
   component: AlertsPage,
 });
+
 
 type Sev = "critical" | "high" | "medium" | "low" | "info";
 const asSev = (s: string): Sev => (["critical","high","medium","low","info"].includes(s) ? s : "info") as Sev;

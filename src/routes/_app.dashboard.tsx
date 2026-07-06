@@ -16,8 +16,20 @@ import { useAlerts, useDashboardStats, useInvestigations, useTransactions } from
 
 export const Route = createFileRoute("/_app/dashboard")({
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Dashboard — SentinelQ" },
+      { name: "description", content: "Executive overview of correlated cyber and fraud risk across your bank." },
+      { property: "og:title", content: "Dashboard — SentinelQ" },
+      { property: "og:description", content: "Executive overview of correlated cyber and fraud risk across your bank." },
+      { property: "og:url", content: "https://sentinel-q.today/dashboard" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://sentinel-q.today/dashboard" }],
+  }),
   component: Dashboard,
 });
+
 
 const tooltipStyle = { background: "rgba(20,25,45,0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, fontSize: 12, backdropFilter: "blur(12px)" } as const;
 type Sev = "critical" | "high" | "medium" | "low" | "info";

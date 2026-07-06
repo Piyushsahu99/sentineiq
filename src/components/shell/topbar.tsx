@@ -74,7 +74,7 @@ export function Topbar({ onCommand, onCopilot }: { onCommand: () => void; onCopi
 
         <Popover>
           <PopoverTrigger asChild>
-            <button className="relative h-9 w-9 grid place-items-center rounded-lg hairline hover:bg-white/6">
+            <button aria-label="Notifications" className="relative h-9 w-9 grid place-items-center rounded-lg hairline hover:bg-white/6">
               <Bell className="h-4 w-4" />
               {notifs.length > 0 && (
                 <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_var(--risk-critical)]" />
