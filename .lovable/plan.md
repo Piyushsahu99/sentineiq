@@ -1,90 +1,76 @@
-# SentinelQ → Real Backend (Lovable Cloud + Supabase + Gemini)
 
-Move SentinelQ from a mock-data prototype to a live, Supabase-powered app with real auth, realtime updates, an AI Copilot backed by Gemini, and a working Correlation Engine. Frontend stays as-is visually; data layer swaps from `src/lib/mock/data.ts` to Supabase queries.
+# Make the six expected outcomes actually work
 
-## Phase 0 — Enable backend
+Today the Correlation Engine scores a transaction against a few heuristics (amount, geo, channel, off‑hours, baseline, some telemetry counts, one IOC rule). The six "expected outcomes" the judges will look for are only partially represented, and several pages (Behavior, Explainable AI, Quantum, Threat Intel) still read mock data. This plan closes those gaps end‑to‑end using the existing Lovable Cloud stack — no new services.
 
-- Enable **Lovable Cloud** (Supabase under the hood: DB, Auth, Realtime, Storage, Edge/server functions).
-- Enable **Lovable AI Gateway** for Gemini calls (no API key handling for you).
+## Scope (only what the outcome list requires)
 
-## Phase 1 — Auth (replace localStorage session)
+1. **Correlate cyber telemetry ↔ transactions** — real join, not just counts.
+2. **Proactive cyber threat detection** — telemetry-only correlation path (no tx needed).
+3. **Fraud pattern detection** — velocity, structuring, new-beneficiary, device/geo drift.
+4. **Quantum attack indicators** — Harvest-Now-Decrypt-Later + downgrade + weak-cipher signals.
+5. **False-positive reduction** — analyst feedback loop + suppression rules + confidence calibration.
+6. **Explainable AI** — every alert carries typed contributors with weights + LLM narrative grounded in the same evidence.
 
-- Supabase Auth: email + password, plus Google sign-in.
-- `profiles` table (id → auth.users, display_name, email).
-- Roles via separate `user_roles` table + `app_role` enum (`soc_analyst`, `fraud_analyst`, `risk_manager`, `executive`) + `has_role()` security-definer function.
-- Auto-create profile on signup via trigger; first user optionally promoted to `executive` for demo.
-- Rewire `/auth/login`, `/auth/mfa` (kept as UI-only OTP step, optional), `/auth/role-select` (writes role via server fn), and `_app` guard to real session — remove `sq_auth` / `sq_mfa` / `sq_role` localStorage.
-- Add `/reset-password` route.
+## Backend changes (migrations + server fns)
 
-## Phase 2 — Database schema
+**Schema (migration, with GRANTs + RLS):**
+- `detection_rules(id, kind, name, weight, params jsonb, enabled)` — seeded with the rule catalog below.
+- `analyst_feedback(id, alert_id, verdict enum['true_positive','false_positive','benign'], notes, user_id, created_at)` — writable by analysts.
+- `suppressions(id, scope jsonb, reason, created_by, expires_at)` — auto-created from repeated FP feedback.
+- Extend `ai_investigations` with `explanation jsonb` (typed contributor tree) and `calibrated_confidence numeric`.
+- Extend `quantum_assets` seed with `hndl_exposure`, `downgrade_observed`, `weak_cipher` flags used by the quantum detector.
 
-Normalized tables in `public`, all with GRANTs + RLS + policies:
+**`src/lib/correlation.functions.ts` — rewrite as a rule pipeline:**
+Replace the current inline heuristics with a typed pipeline that runs on either a `transactionId` OR a `telemetryWindow` (proactive path):
 
-`customers, accounts, devices, sessions, transactions, beneficiaries, cyber_telemetry, threat_intel, iocs, alerts, ai_investigations, risk_scores, quantum_assets, reports, knowledge_edges, notifications`.
+```
+Signal[] = [
+  fraud.amount_zscore, fraud.velocity_1h, fraud.structuring_9k,
+  fraud.new_beneficiary, fraud.geo_impossible_travel, fraud.device_change,
+  cyber.credential_stuffing (auth telemetry burst),
+  cyber.mfa_fatigue, cyber.impossible_login, cyber.malware_beacon (DNS/endpoint),
+  cyber.phishing_click (email + url IOC),
+  xcorr.cyber_precedes_tx (auth anomaly on same customer within 30m of tx),
+  xcorr.ioc_touches_tx_channel,
+  quantum.hndl_exposed_asset_touched,
+  quantum.tls_downgrade_on_session,
+  quantum.weak_cipher_on_payment_endpoint,
+]
+```
+Each signal returns `{ id, kind, weight, evidence[], confidence }`. Composite = calibrated sum minus active suppressions. Persist the full tree into `ai_investigations.explanation` so Explainable AI reads real data.
 
-- FKs, indexes on hot columns (customer_id, created_at, risk_score, severity).
-- RLS: analyst/executive roles can `SELECT` operational tables via `has_role()`; only service_role writes for ingestion tables. Users can read their own `profiles`.
-- Seed migration inserts a realistic demo dataset (customers, 500 transactions, telemetry, threat intel, one full correlated incident) so the dashboard is populated on first login.
+**New server fns:**
+- `runProactiveScan()` — sweeps last 15 min of telemetry, emits alerts with no transaction attached.
+- `submitFeedback({alertId, verdict, notes})` — writes `analyst_feedback`; on 3× FP for the same rule+entity in 7d, inserts a `suppressions` row and lowers that rule's effective weight for that entity.
+- `getExplanation({investigationId})` — returns the stored contributor tree; Copilot server fn already grounded on live data now also receives this tree so narratives cite the same evidence IDs.
 
-## Phase 3 — Realtime dashboards
+## Frontend wiring (swap mock → live)
 
-- Subscribe to `transactions`, `alerts`, `risk_scores`, `ai_investigations`, `notifications` via `supabase.channel(...).on('postgres_changes', ...)`.
-- Dashboard KPIs, Live Threat Timeline, Alert Center, Risk charts, Correlation feed all update without refresh.
-- Replace every `src/lib/mock/data.ts` consumer with TanStack Query + Supabase; keep the mock module only as a seed helper (or delete).
+- **Correlation page** — already live; render new signal `kind` groups (fraud / cyber / xcorr / quantum) as colored lanes.
+- **Explainable AI page** — read `explanation` tree; per-contributor bar chart with weight + evidence rows + "Ask Copilot about this signal" button (calls `askCopilot` with the contributor id).
+- **Behavior page** — swap mock to `sessions` + `devices` + velocity/impossible-travel signals from the pipeline.
+- **Threat Intel page** — keep OSM map; overlay live `iocs` + `threat_intel` rows and mark ones that fired via `xcorr.ioc_touches_tx_channel`.
+- **Quantum page** — read `quantum_assets`; show HNDL exposure score, downgrade events, and any alerts produced by the quantum detectors.
+- **Alerts page** — add Verdict buttons (TP / FP / Benign) calling `submitFeedback`; show suppression badge when a rule is currently suppressed for that entity.
 
-## Phase 4 — Correlation Engine (server function)
+## Deterministic demo
 
-- `createServerFn` `correlateTransaction({ transactionId })`:
-  1. Load transaction + customer baseline, recent sessions, device fingerprint, geo, telemetry in the last 24h, matching IOCs, recent alerts.
-  2. Compute weighted composite risk score (0–100) with named contributors (device change, geo anomaly, velocity, IOC hit, off-hours, amount z-score, telemetry severity).
-  3. Insert into `risk_scores`, insert `ai_investigations` row (root cause, evidence JSON, recommended actions), insert `alert` if score ≥ 80, insert `knowledge_edges` for entities touched, insert `notifications`.
-- Postgres trigger on `INSERT INTO transactions` → calls a server route `/api/public/hooks/tx-correlate` (signed with `CORRELATION_SECRET`) that invokes the server fn. Alternative: call the server fn directly from the client after insert (simpler for hackathon).
+Extend `seedDeterministic({scenario})` with two new presets so judges can trigger each outcome on demand:
+- `cyber_first` — auth burst + impossible login + malware beacon → proactive alert with no tx.
+- `quantum` — TLS downgrade + weak cipher on a payment endpoint touching an HNDL-exposed asset → quantum alert.
+Keep existing `high_risk` preset for the fraud+xcorr path (composite 89).
 
-## Phase 5 — AI Copilot (Gemini via Lovable AI Gateway)
+## Out of scope
 
-- `createServerFn` `askCopilot({ prompt, contextIds })` with `requireSupabaseAuth`.
-- Server fn pulls live rows (recent txns, alerts, target investigation), builds a compact context, calls Gemini `gemini-2.5-flash` through the AI Gateway, streams the answer.
-- Suggestion chips map to canned intents but responses are real LLM output grounded in live data.
+- Real SIEM ingestion, real MFA, SSO providers beyond Google, PDF template polish, FastAPI sidecar. Say the word if you want any of these next.
 
-## Phase 6 — Reports
+## Technical details
 
-- Report definitions in `reports` table; server fn assembles data → returns structured JSON → client renders with existing PDF export (`jspdf`/`html2canvas`).
-- SOC, Fraud, Executive, Compliance variants, all from live data.
+- All new tables get `GRANT` + RLS + `is_analyst()` policies in the same migration.
+- Pipeline runs inside `correlateTransaction` / `runProactiveScan` server fns behind `requireSupabaseAuth` + analyst check.
+- Suppression + feedback affect the *next* score; historical alerts stay immutable.
+- `explanation` JSON schema: `{ signals: [{id, kind, weight, confidence, evidence: [{source, ref_id, ts, note}]}], composite, calibrated_confidence, suppressed: [...] }`.
+- Copilot prompt is extended to include the `explanation` tree so answers cite `signal.id` — no free-form hallucination.
 
-## Phase 7 — Quantum module
-
-- `quantum_assets` table (asset, algo, key_size, tls_version, expires_at, migration_status, sensitivity).
-- Readiness score = weighted % of assets on PQC-ready algorithms; HNDL exposure = Σ sensitivity of long-lived RSA/ECC assets.
-- Charts/tables read live rows; “Migrate” action updates status.
-
-## Phase 8 — Knowledge Graph
-
-- `knowledge_edges(src_type, src_id, dst_type, dst_id, weight, created_at)` populated by Correlation Engine.
-- Replace SVG mock graph with **react-force-graph-2d** (already planned) reading edges live; realtime subscribe for new edges.
-
-## Phase 9 — Alerts
-
-- Trigger already created in Phase 4. Alert Center reads `alerts` live; analyst can acknowledge / assign / resolve — updates gated by RLS (analyst roles only). Realtime badge on topbar via `notifications`.
-
-## Phase 10 — Cleanup
-
-- Delete `src/lib/mock/data.ts` and every import.
-- Confirm no route reads from localStorage for data.
-- Loading skeletons + `errorComponent` / `notFoundComponent` on every route with a loader.
-
-## Technical Details
-
-- Stack stays TanStack Start; all server logic uses `createServerFn` (or `/api/public/*` route for the DB webhook). No FastAPI, no Supabase Edge Functions unless a DB trigger truly needs one.
-- Clients: browser `@/integrations/supabase/client` for reads/subscriptions; `requireSupabaseAuth` for user-scoped server fns; `supabaseAdmin` only inside the correlation route (verified via secret).
-- Public routes (`/`, `/auth/*`) stay SSR; the entire app shell moves under `src/routes/_authenticated/` (integration-managed layout) — the current `_app.tsx` `beforeLoad` localStorage check is removed.
-- Realtime enabled per table via `alter publication supabase_realtime add table ...`.
-- Secrets needed: `CORRELATION_SECRET` (generated) if we wire the DB-trigger webhook.
-
-## Out of scope (say the word to add)
-
-- Real MFA (kept as UI step or removed).
-- SSO (Okta/Azure/Ping) — Google only for now.
-- SIEM ingestion connectors — telemetry stays synthetic/seeded.
-- Actual PDF templating polish beyond current export.
-
-Approve and I'll execute Phase 0 → 10 in order. Say if you'd rather skip MFA UI entirely or want the DB-trigger webhook path over client-invoked correlation.
+Approve and I'll execute in this order: migration → pipeline rewrite → proactive scan + feedback fns → page rewires → new seed presets → run smoke script.
