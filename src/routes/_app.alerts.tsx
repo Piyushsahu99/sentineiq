@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import { useAlerts, type DbAlert } from "@/lib/live-queries";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { runProactiveScan } from "@/lib/correlation.functions";
 
 export const Route = createFileRoute("/_app/alerts")({
   ssr: false,
@@ -59,12 +61,26 @@ function AlertsPage() {
     if (error) toast.error(error.message); else toast.success(`Alert ${status}`);
   }
 
+  const scan = useServerFn(runProactiveScan);
+  async function proactive() {
+    try {
+      const res: any = await (scan as any)();
+      if (res?.created) toast.success(`Proactive scan created ${res.severity} alert from ${res.evidence_count} events`);
+      else toast.info(res?.message ?? "No critical events in the last 15 minutes");
+    } catch (e: any) { toast.error(e.message ?? "Scan failed"); }
+  }
+
   return (
     <div>
       <PageHeader
         title="Alert Center"
-        subtitle="Real-time incident queue backed by Supabase Realtime — with ownership, SLAs, and one-click AI investigation."
-        actions={<button className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:brightness-110">Create alert rule</button>}
+        subtitle="Real-time incident queue backed by Realtime — with ownership, SLAs, and proactive scans."
+        actions={
+          <div className="flex gap-2">
+            <button onClick={proactive} className="text-xs px-3 py-1.5 rounded-lg hairline hover:bg-white/6">Run proactive scan</button>
+            <button className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:brightness-110">Create alert rule</button>
+          </div>
+        }
       />
 
       <div className="flex flex-wrap gap-2 mb-4">
