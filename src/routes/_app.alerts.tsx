@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import { useAlerts, type DbAlert } from "@/lib/live-queries";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { runProactiveScan } from "@/lib/correlation.functions";
 
 export const Route = createFileRoute("/_app/alerts")({
   ssr: false,
