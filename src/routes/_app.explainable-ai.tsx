@@ -58,7 +58,8 @@ function XAIPage() {
   const explanation = (active?.explanation ?? null) as Explanation | null;
 
   const mutate = useMutation({
-    mutationFn: (input: Parameters<typeof submitFeedback>[0]["data"]) => submit({ data: input }),
+    mutationFn: (input: { investigationId?: string; signalId?: string; verdict: "true_positive" | "false_positive" | "benign"; notes?: string }) =>
+      (submit as any)({ data: input }),
     onSuccess: () => { toast.success("Feedback recorded"); qc.invalidateQueries({ queryKey: ["xai-investigations"] }); },
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
