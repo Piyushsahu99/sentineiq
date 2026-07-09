@@ -18,11 +18,13 @@ export type Database = {
         Row: {
           attack_type: string | null
           business_impact: number | null
+          calibrated_confidence: number | null
           compliance: Json | null
           confidence: number
           created_at: string
           customer_id: string | null
           evidence: Json | null
+          explanation: Json | null
           id: string
           recommended_actions: Json | null
           risk_factors: Json | null
@@ -34,11 +36,13 @@ export type Database = {
         Insert: {
           attack_type?: string | null
           business_impact?: number | null
+          calibrated_confidence?: number | null
           compliance?: Json | null
           confidence?: number
           created_at?: string
           customer_id?: string | null
           evidence?: Json | null
+          explanation?: Json | null
           id?: string
           recommended_actions?: Json | null
           risk_factors?: Json | null
@@ -50,11 +54,13 @@ export type Database = {
         Update: {
           attack_type?: string | null
           business_impact?: number | null
+          calibrated_confidence?: number | null
           compliance?: Json | null
           confidence?: number
           created_at?: string
           customer_id?: string | null
           evidence?: Json | null
+          explanation?: Json | null
           id?: string
           recommended_actions?: Json | null
           risk_factors?: Json | null
@@ -143,6 +149,54 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analyst_feedback: {
+        Row: {
+          alert_id: string | null
+          created_at: string
+          id: string
+          investigation_id: string | null
+          notes: string | null
+          signal_id: string | null
+          user_id: string | null
+          verdict: string
+        }
+        Insert: {
+          alert_id?: string | null
+          created_at?: string
+          id?: string
+          investigation_id?: string | null
+          notes?: string | null
+          signal_id?: string | null
+          user_id?: string | null
+          verdict: string
+        }
+        Update: {
+          alert_id?: string | null
+          created_at?: string
+          id?: string
+          investigation_id?: string | null
+          notes?: string | null
+          signal_id?: string | null
+          user_id?: string | null
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analyst_feedback_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analyst_feedback_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_investigations"
             referencedColumns: ["id"]
           },
         ]
@@ -656,6 +710,39 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+        }
+        Relationships: []
+      }
+      suppressions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          expires_at: string
+          id: string
+          reason: string | null
+          signal_id: string
+          weight_multiplier: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          expires_at?: string
+          id?: string
+          reason?: string | null
+          signal_id: string
+          weight_multiplier?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          expires_at?: string
+          id?: string
+          reason?: string | null
+          signal_id?: string
+          weight_multiplier?: number
         }
         Relationships: []
       }
