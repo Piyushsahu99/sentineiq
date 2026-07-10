@@ -46,32 +46,39 @@ async def check_auth(page: Page) -> tuple[str, str]:
     await page.locator('input[type=email]').fill(email)
     await page.locator('input[type=password]').fill(pw)
     await page.get_by_role("button", name="Create account").last.click()   # submit
-    await page.wait_for_timeout(2500)
+    try:
+        await page.wait_for_url("**/auth/mfa", timeout=8000)
+    except Exception:
+        pass
     await shot(page, "1_after_signup")
-    record("1.2 signup accepted", "login" not in page.url or "signed in" in (await page.content()).lower(), page.url)
+    record("1.2 signup accepted", "/auth/mfa" in page.url or "/dashboard" in page.url, page.url)
 
-    # If routed to mfa, complete demo code
     if "mfa" in page.url:
-        btn = page.get_by_text("Use demo code")
-        if await btn.count():
-            await btn.click()
-        submit = page.get_by_role("button").filter(has_text="Verify")
-        if await submit.count():
-            await submit.first.click()
-        await page.wait_for_timeout(1500)
-    # Role select on first login
+        demo = page.get_by_text("Use demo code")
+        if await demo.count(): await demo.click()
+        verify = page.get_by_role("button", name="Verify & continue")
+        if await verify.count(): await verify.first.click()
+        try:
+            await page.wait_for_url(lambda u: "role-select" in u or "/dashboard" in u, timeout=8000)
+        except Exception:
+            pass
+
     if "role-select" in page.url:
         await page.get_by_text("SOC Analyst").first.click()
-        await page.wait_for_timeout(300)
-        cont = page.get_by_role("button").filter(has_text="Enter SentinelQ")
-        if await cont.count():
-            await cont.first.click()
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(200)
+        cont = page.get_by_role("button", name="Enter SentinelQ")
+        if await cont.count(): await cont.first.click()
+        # seed can take a while
+        try:
+            await page.wait_for_url("**/dashboard", timeout=45000)
+        except Exception:
+            pass
+    await page.wait_for_timeout(1500)
     await shot(page, "1_after_role")
     record("1.5 lands on dashboard", "/dashboard" in page.url, page.url)
 
-    # Reload → session persists
-    await page.reload(wait_until="networkidle")
+    await page.reload(wait_until="domcontentloaded")
+    await page.wait_for_timeout(1500)
     record("1.6 session persists", "/dashboard" in page.url, page.url)
     return email, pw
 
@@ -144,7 +151,8 @@ async def check_copilot(page: Page) -> None:
         if any(k in body.lower() for k in ("alert", "severity", "critical", "no critical")):
             break
     await shot(page, "5_copilot")
-    ok = any(k in (await page.content()).lower() for k in ("alert","risk","critical","no critical","not configured"))
+    content_lc = (await page.content()).lower()
+    ok = any(k in content_lc for k in ("alert","risk","critical","no critical","not configured"))
     record("5.2 copilot answer grounded", ok)
 
 # ---------- main ----------

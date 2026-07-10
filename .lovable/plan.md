@@ -1,76 +1,58 @@
+# Make SentinelQ Fully Working — Feature-by-Feature Hardening
 
-# Make the six expected outcomes actually work
+Goal: ship a demo-ready prototype where every sidebar module loads real data, reacts to user actions, and passes an automated Playwright smoke check before moving to the next one.
 
-Today the Correlation Engine scores a transaction against a few heuristics (amount, geo, channel, off‑hours, baseline, some telemetry counts, one IOC rule). The six "expected outcomes" the judges will look for are only partially represented, and several pages (Behavior, Explainable AI, Quantum, Threat Intel) still read mock data. This plan closes those gaps end‑to‑end using the existing Lovable Cloud stack — no new services.
+## Approach
 
-## Scope (only what the outcome list requires)
+Work module-by-module. For each: (1) fix data wiring, (2) fix interactions, (3) run a targeted Playwright script that logs in, seeds data, visits the route, screenshots, and asserts key DOM. Only move to the next module once the current one is green.
 
-1. **Correlate cyber telemetry ↔ transactions** — real join, not just counts.
-2. **Proactive cyber threat detection** — telemetry-only correlation path (no tx needed).
-3. **Fraud pattern detection** — velocity, structuring, new-beneficiary, device/geo drift.
-4. **Quantum attack indicators** — Harvest-Now-Decrypt-Later + downgrade + weak-cipher signals.
-5. **False-positive reduction** — analyst feedback loop + suppression rules + confidence calibration.
-6. **Explainable AI** — every alert carries typed contributors with weights + LLM narrative grounded in the same evidence.
+## Order of work (by demo importance)
 
-## Backend changes (migrations + server fns)
+1. **Auth + Role Select + Seed-on-login** — signup → MFA → role → auto-seed → dashboard lands populated.
+2. **Dashboard** — KPIs, live transactions panel, threat map render with seeded data.
+3. **Alerts** — list renders, tabs filter, Acknowledge/Resolve mutate + realtime updates second tab, "Run proactive scan" creates an alert.
+4. **Transactions** — list renders, "Simulate suspicious" triggers `correlateTransaction`, toast shows risk, new investigation appears.
+5. **Investigations** — list of AI investigations with attack_type, risk_factors, recommended_actions from live rows.
+6. **Correlation** — kill-chain timeline links txn/customer/device from `knowledge_edges`.
+7. **Explainable AI** — renders grouped signals from investigation `explanation`, feedback buttons write to `analyst_feedback`.
+8. **Telemetry** — cyber_telemetry rows render + filters.
+9. **Behavior** — sessions + devices live queries.
+10. **Threat Intel** — iocs + threat_intel rows, external feed optional.
+11. **Quantum** — quantum_assets list, migration status chart.
+12. **Graph** — knowledge_edges visualization.
+13. **Reports** — export/download of a real summary.
+14. **Settings** — profile, demo-data buttons (Full / High-risk / Reset) all work.
+15. **Copilot dock** — grounded answers referencing seeded rows; graceful 402/429.
 
-**Schema (migration, with GRANTs + RLS):**
-- `detection_rules(id, kind, name, weight, params jsonb, enabled)` — seeded with the rule catalog below.
-- `analyst_feedback(id, alert_id, verdict enum['true_positive','false_positive','benign'], notes, user_id, created_at)` — writable by analysts.
-- `suppressions(id, scope jsonb, reason, created_by, expires_at)` — auto-created from repeated FP feedback.
-- Extend `ai_investigations` with `explanation jsonb` (typed contributor tree) and `calibrated_confidence numeric`.
-- Extend `quantum_assets` seed with `hndl_exposure`, `downgrade_observed`, `weak_cipher` flags used by the quantum detector.
+## Per-module checklist
 
-**`src/lib/correlation.functions.ts` — rewrite as a rule pipeline:**
-Replace the current inline heuristics with a typed pipeline that runs on either a `transactionId` OR a `telemetryWindow` (proactive path):
+- Read the route + its live-queries hook.
+- Confirm Supabase query returns rows for the seeded tenant (via `supabase--read_query`).
+- Fix empty-state, loading skeleton, error boundary.
+- Wire any button that currently no-ops.
+- Add/adjust seed rows in `seedDeterministic` if the module needs specific shapes.
+- Playwright script under `/tmp/browser/feat-<name>/` — login with a fresh dummy user, seed, navigate, screenshot, assert.
+- View screenshot with `code--view` to visually confirm.
+- Record PASS/FAIL in `docs/SMOKE_TESTS.md` results table.
 
-```
-Signal[] = [
-  fraud.amount_zscore, fraud.velocity_1h, fraud.structuring_9k,
-  fraud.new_beneficiary, fraud.geo_impossible_travel, fraud.device_change,
-  cyber.credential_stuffing (auth telemetry burst),
-  cyber.mfa_fatigue, cyber.impossible_login, cyber.malware_beacon (DNS/endpoint),
-  cyber.phishing_click (email + url IOC),
-  xcorr.cyber_precedes_tx (auth anomaly on same customer within 30m of tx),
-  xcorr.ioc_touches_tx_channel,
-  quantum.hndl_exposed_asset_touched,
-  quantum.tls_downgrade_on_session,
-  quantum.weak_cipher_on_payment_endpoint,
-]
-```
-Each signal returns `{ id, kind, weight, evidence[], confidence }`. Composite = calibrated sum minus active suppressions. Persist the full tree into `ai_investigations.explanation` so Explainable AI reads real data.
+## Final pass
 
-**New server fns:**
-- `runProactiveScan()` — sweeps last 15 min of telemetry, emits alerts with no transaction attached.
-- `submitFeedback({alertId, verdict, notes})` — writes `analyst_feedback`; on 3× FP for the same rule+entity in 7d, inserts a `suppressions` row and lowers that rule's effective weight for that entity.
-- `getExplanation({investigationId})` — returns the stored contributor tree; Copilot server fn already grounded on live data now also receives this tree so narratives cite the same evidence IDs.
+- Run full `python3 scripts/smoke.py` → all sections green.
+- Route sweep across all 13 protected routes → no `pageerror`, no auth bounce.
+- Sign-out hygiene: no 401 storm in console.
+- Publish reminder.
 
-## Frontend wiring (swap mock → live)
+## Technical notes
 
-- **Correlation page** — already live; render new signal `kind` groups (fraud / cyber / xcorr / quantum) as colored lanes.
-- **Explainable AI page** — read `explanation` tree; per-contributor bar chart with weight + evidence rows + "Ask Copilot about this signal" button (calls `askCopilot` with the contributor id).
-- **Behavior page** — swap mock to `sessions` + `devices` + velocity/impossible-travel signals from the pipeline.
-- **Threat Intel page** — keep OSM map; overlay live `iocs` + `threat_intel` rows and mark ones that fired via `xcorr.ioc_touches_tx_channel`.
-- **Quantum page** — read `quantum_assets`; show HNDL exposure score, downgrade events, and any alerts produced by the quantum detectors.
-- **Alerts page** — add Verdict buttons (TP / FP / Benign) calling `submitFeedback`; show suppression badge when a rule is currently suppressed for that entity.
+- Use existing `requireSupabaseAuth` server fns; do not add FastAPI or edge functions.
+- Any new query respects RLS via `is_analyst` (already covers all 4 roles).
+- Seed via existing `seedDeterministic` server fn; extend it rather than adding a new one when a module lacks data.
+- Screenshots go under `/tmp/browser/feat-<slug>/` — never committed.
+- No Lovable branding introduced; keep README + FAQ copy neutral.
 
-## Deterministic demo
+## Deliverables
 
-Extend `seedDeterministic({scenario})` with two new presets so judges can trigger each outcome on demand:
-- `cyber_first` — auth burst + impossible login + malware beacon → proactive alert with no tx.
-- `quantum` — TLS downgrade + weak cipher on a payment endpoint touching an HNDL-exposed asset → quantum alert.
-Keep existing `high_risk` preset for the fraud+xcorr path (composite 89).
-
-## Out of scope
-
-- Real SIEM ingestion, real MFA, SSO providers beyond Google, PDF template polish, FastAPI sidecar. Say the word if you want any of these next.
-
-## Technical details
-
-- All new tables get `GRANT` + RLS + `is_analyst()` policies in the same migration.
-- Pipeline runs inside `correlateTransaction` / `runProactiveScan` server fns behind `requireSupabaseAuth` + analyst check.
-- Suppression + feedback affect the *next* score; historical alerts stay immutable.
-- `explanation` JSON schema: `{ signals: [{id, kind, weight, confidence, evidence: [{source, ref_id, ts, note}]}], composite, calibrated_confidence, suppressed: [...] }`.
-- Copilot prompt is extended to include the `explanation` tree so answers cite `signal.id` — no free-form hallucination.
-
-Approve and I'll execute in this order: migration → pipeline rewrite → proactive scan + feedback fns → page rewires → new seed presets → run smoke script.
+- Each module visibly working in preview at 649px and desktop widths.
+- Updated `docs/SMOKE_TESTS.md` with per-module PASS rows + date.
+- One final screenshot per module archived in `/tmp/browser/final/`.
+- Green `scripts/smoke.py` run captured in the results JSON.
