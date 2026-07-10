@@ -151,7 +151,8 @@ async def check_copilot(page: Page) -> None:
         if any(k in body.lower() for k in ("alert", "severity", "critical", "no critical")):
             break
     await shot(page, "5_copilot")
-    ok = any(k in (await page.content()).lower() for k in ("alert","risk","critical","no critical","not configured"))
+    content_lc = (await page.content()).lower()
+    ok = any(k in content_lc for k in ("alert","risk","critical","no critical","not configured"))
     record("5.2 copilot answer grounded", ok)
 
 # ---------- main ----------
