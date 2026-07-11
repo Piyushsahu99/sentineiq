@@ -13,6 +13,8 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, Res
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { useAlerts, useDashboardStats, useInvestigations, useTransactions } from "@/lib/live-queries";
+import { usePrefs, formatMoney, formatCompact } from "@/lib/currency";
+
 
 export const Route = createFileRoute("/_app/dashboard")({
   ssr: false,
@@ -40,6 +42,8 @@ function Dashboard() {
   const alerts = useAlerts();
   const invs = useInvestigations();
   const txs = useTransactions(30);
+  const prefs = usePrefs();
+
 
   const s = stats.data;
   const blocked = (txs.data ?? []).filter((t) => t.status === "blocked").slice(0, 6);
@@ -62,7 +66,7 @@ function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-6">
         <KpiCard label="Total Threats" value={(s?.totalTelemetry ?? 0) + (alerts.data?.length ?? 0)} delta={12} icon={<Shield className="h-4 w-4" />} />
         <KpiCard label="Critical Alerts" value={s?.criticalAlerts ?? 0} delta={-8} icon={<AlertTriangle className="h-4 w-4" />} accent="var(--risk-critical)" gradient="from-rose-500/20 to-orange-500/20" />
-        <KpiCard label="Fraud Prevented" value={s?.fraudPreventedUsd ?? 0} format={(n) => "$" + (n/1_000).toFixed(1) + "K"} delta={18} icon={<ShieldCheck className="h-4 w-4" />} accent="var(--risk-low)" gradient="from-emerald-500/20 to-teal-500/20" />
+        <KpiCard label="Fraud Prevented" value={s?.fraudPreventedUsd ?? 0} format={(n) => formatCompact(n, prefs)} delta={18} icon={<ShieldCheck className="h-4 w-4" />} accent="var(--risk-low)" gradient="from-emerald-500/20 to-teal-500/20" />
         <KpiCard label="Transactions Monitored" value={s?.transactionsMonitored ?? 0} delta={4} icon={<Activity className="h-4 w-4" />} />
         <KpiCard label="Avg. Risk Score" value={s?.avgRisk ?? 0} unit="/100" delta={-3} icon={<Gauge className="h-4 w-4" />} accent="var(--cyber-violet)" gradient="from-violet-500/20 to-fuchsia-500/20" />
         <KpiCard label="AI Investigations" value={s?.totalInvestigations ?? 0} delta={7} icon={<Sparkles className="h-4 w-4" />} accent="var(--cyber-cyan)" />
@@ -85,7 +89,7 @@ function Dashboard() {
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-xs text-muted-foreground font-mono">{new Date(t.created_at).toLocaleTimeString()}</span>
                       <RiskBadge severity={sev} />
-                      <span className="text-sm font-medium">{t.currency} {Number(t.amount).toLocaleString()} · {t.channel}</span>
+                      <span className="text-sm font-medium">{formatMoney(t.amount, { currency: t.currency })} · {t.channel}</span>
                       <span className="text-[11px] text-muted-foreground">{t.merchant ?? "—"}</span>
                       <span className="ml-auto text-xs font-mono text-muted-foreground">{t.country ?? "??"} · {t.status}</span>
                     </div>
@@ -162,8 +166,9 @@ function Dashboard() {
                 </defs>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="day" tick={{ fill: "hsl(220 10% 60%)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "hsl(220 10% 60%)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => "$" + (v/1000).toFixed(0) + "K"} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => "$" + v.toLocaleString()} />
+                <YAxis tick={{ fill: "hsl(220 10% 60%)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCompact(v, prefs)} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => formatMoney(v, prefs)} />
+
                 <Area type="monotone" dataKey="attempted" stroke="var(--risk-critical)" strokeWidth={2} fill="url(#grad-att)" />
                 <Area type="monotone" dataKey="prevented" stroke="var(--cyber-cyan)" strokeWidth={2} fill="url(#grad-prev)" />
               </AreaChart>
@@ -184,14 +189,15 @@ function Dashboard() {
         </GlassCard>
 
         <RecentPanel title="Recent AI Investigations" href="/investigations" items={(invs.data ?? []).slice(0, 6).map((i) => ({
-          id: i.id, primary: i.title, secondary: `${i.confidence}% confidence · $${Number(i.business_impact ?? 0).toLocaleString()} impact`, ts: new Date(i.created_at).getTime(), icon: <FileSearch2 className="h-3.5 w-3.5 text-violet-300" />,
+          id: i.id, primary: i.title, secondary: `${i.confidence}% confidence · ${formatMoney(i.business_impact ?? 0, prefs)} impact`, ts: new Date(i.created_at).getTime(), icon: <FileSearch2 className="h-3.5 w-3.5 text-violet-300" />,
         }))} />
         <RecentPanel title="Recent Alerts" href="/alerts" items={(alerts.data ?? []).slice(0, 6).map((a) => ({
           id: a.id, primary: a.title, secondary: `${a.source ?? "—"} · ${a.status}`, ts: new Date(a.created_at).getTime(), severity: asSev(a.severity),
         }))} />
         <RecentPanel title="Recent Blocked Transactions" href="/transactions" items={blocked.map((t) => ({
-          id: t.id, primary: `${t.currency} ${Number(t.amount).toLocaleString()} · ${t.country ?? "—"}`, secondary: `${t.channel} · risk ${t.risk_score ?? "—"}`, ts: new Date(t.created_at).getTime(), icon: <Ban className="h-3.5 w-3.5 text-rose-300" />,
+          id: t.id, primary: `${formatMoney(t.amount, { currency: t.currency })} · ${t.country ?? "—"}`, secondary: `${t.channel} · risk ${t.risk_score ?? "—"}`, ts: new Date(t.created_at).getTime(), icon: <Ban className="h-3.5 w-3.5 text-rose-300" />,
         }))} />
+
       </div>
     </div>
   );

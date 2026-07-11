@@ -10,6 +10,8 @@ import { seedDeterministic } from "@/lib/seed.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
+import { usePrefs, formatMoney } from "@/lib/currency";
+
 
 export const Route = createFileRoute("/_app/transactions")({
   ssr: false,
@@ -23,13 +25,15 @@ function TxPage() {
   const { data: txs = [] } = useTransactions(60);
   const correlate = useServerFn(correlateTransaction);
   const seed = useServerFn(seedDeterministic);
+  const prefs = usePrefs();
   const [busy, setBusy] = useState(false);
   const [seeding, setSeeding] = useState(false);
+
 
   async function seedHighRisk() {
     setSeeding(true);
     try {
-      const res = await seed({ data: { scenario: "high_risk" } });
+      const res = await seed({ data: { scenario: "high_risk", currency: prefs.currency } });
       const target = res.transactions?.[0];
       if (!target) throw new Error("Seed returned no transaction");
       toast.success(`Seeded deterministic scenario · correlating tx…`);
@@ -48,11 +52,12 @@ function TxPage() {
       const amount = Math.round(20000 + Math.random() * 30000);
       const country = ["RU", "NG", "AE"][Math.floor(Math.random() * 3)];
       const { data: inserted, error } = await supabase.from("transactions").insert({
-        customer_id: cust.id, amount, currency: "USD",
+        customer_id: cust.id, amount, currency: prefs.currency,
         channel: Math.random() > 0.5 ? "wire" : "crypto",
         merchant: "Unknown beneficiary",
         country, status: "pending",
       }).select("id").single();
+
       if (error || !inserted) throw error ?? new Error("Insert failed");
       toast.success(`Transaction inserted, correlating…`);
       const res = await correlate({ data: { transactionId: inserted.id } });
@@ -84,7 +89,7 @@ function TxPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total volume" value={`$${totalUsd.toLocaleString()}`} />
+        <StatCard label="Total volume" value={formatMoney(totalUsd, prefs)} />
         <StatCard label="Transactions" value={txs.length.toString()} />
         <StatCard label="Flagged" value={flagged.toString()} accent="text-amber-300" />
         <StatCard label="Blocked" value={blocked.toString()} accent="text-rose-300" />
@@ -111,7 +116,7 @@ function TxPage() {
                 return (
                   <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.01 }} className="border-b border-white/4 hover:bg-white/3">
                     <td className="py-2 text-[11px] text-muted-foreground font-mono">{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</td>
-                    <td className="font-mono">{t.currency} {Number(t.amount).toLocaleString()}</td>
+                    <td className="font-mono">{formatMoney(t.amount, { currency: t.currency })}</td>
                     <td>{t.channel}</td>
                     <td className="text-muted-foreground">{t.merchant ?? "—"}</td>
                     <td>{t.country ?? "—"}</td>
