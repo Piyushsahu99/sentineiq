@@ -285,8 +285,23 @@ export const correlateTransaction = createServerFn({ method: "POST" })
       });
     }
 
+    // Persist to per-user transaction-checking history so users see every
+    // correlation performed against a tx (Profile → Checking history).
+    await supabaseAdmin.from("tx_check_history").insert({
+      user_id: context.userId,
+      transaction_id: tx.id,
+      verdict: composite >= 80 ? "blocked" : composite >= 60 ? "flagged" : "clean",
+      risk_score: composite,
+      signals: signals.map((s) => ({ id: s.id, kind: s.kind, name: s.name, weight: s.weight })),
+      currency: tx.currency,
+      amount_local: tx.amount,
+      merchant: tx.merchant,
+      country: tx.country,
+    });
+
     return { composite, calibrated, contributors: signals, blocked: composite >= 80, dominant_kind: dominant, suppressed };
   });
+
 
 // ---------- Proactive scan: no transaction required ----------
 export const runProactiveScan = createServerFn({ method: "POST" })
