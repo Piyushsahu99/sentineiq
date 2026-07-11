@@ -42,7 +42,7 @@ function SettingsPage() {
   async function runSeed(scenario: "demo" | "high_risk" | "baseline" | "reset") {
     setBusy(scenario === "reset" ? "reset" : "seed");
     try {
-      const res = await seed({ data: { scenario } });
+      const res = await seed({ data: { scenario, currency: prefs.currency } });
       if (scenario === "reset") {
         toast.success("Demo data cleared.");
       } else {
@@ -74,7 +74,64 @@ function SettingsPage() {
         </div>
 
         <div className="col-span-12 md:col-span-9 space-y-6">
+          {tab === "region" && (
+            <GlassCard>
+              <SectionHeader
+                title="Region, bank & currency"
+                description="Applies to every module. Currency changes optionally re-seed the tenant so numbers stay consistent."
+                action={<Link to="/profile" className="text-[11px] text-cyan-300 hover:underline">Open full profile →</Link>}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className="block">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Region</span>
+                  <select value={region} onChange={(e) => {
+                    const r = e.target.value as RegionCode;
+                    setRegion(r); setCurrency(REGIONS[r].currency); setBank(REGIONS[r].banks[0]);
+                  }} className="mt-1 w-full bg-white/5 hairline rounded-lg px-3 py-2 text-sm">
+                    {(Object.keys(REGIONS) as RegionCode[]).map((k) => <option key={k} value={k}>{REGIONS[k].label} ({k})</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Bank</span>
+                  <select value={bank} onChange={(e) => setBank(e.target.value)} className="mt-1 w-full bg-white/5 hairline rounded-lg px-3 py-2 text-sm">
+                    {REGIONS[region].banks.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Currency</span>
+                  <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="mt-1 w-full bg-white/5 hairline rounded-lg px-3 py-2 text-sm">
+                    {["INR","USD","EUR","GBP","AED","SGD","JPY"].map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="mt-3 text-[11px] text-muted-foreground">Preview: <span className="font-mono text-cyan-300">{formatMoney(125000, { currency, region, locale: REGIONS[region].locale, bank })}</span></div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button disabled={savingPrefs} onClick={async () => {
+                  setSavingPrefs(true);
+                  try { await updatePrefs({ data: { region, currency, bank } }); await refreshPrefs(); toast.success("Preferences saved"); }
+                  catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                  finally { setSavingPrefs(false); }
+                }} className="text-xs px-3 py-2 rounded-lg hairline hover:bg-white/6 disabled:opacity-60">
+                  {savingPrefs ? "Saving…" : "Save preferences"}
+                </button>
+                <button disabled={savingPrefs || currency === prefs.currency} onClick={async () => {
+                  setSavingPrefs(true);
+                  try {
+                    await updatePrefs({ data: { region, currency, bank } });
+                    await refreshPrefs();
+                    await seed({ data: { scenario: "demo", currency } });
+                    toast.success("Saved & re-seeded in " + currency);
+                  } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                  finally { setSavingPrefs(false); }
+                }} className="text-xs px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold hover:brightness-110 disabled:opacity-60">
+                  Save & re-seed tenant in {currency}
+                </button>
+              </div>
+            </GlassCard>
+          )}
+
           {tab === "data" && (
+
             <GlassCard>
               <SectionHeader
                 title="Demo Data"
