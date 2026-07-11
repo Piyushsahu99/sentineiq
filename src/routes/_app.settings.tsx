@@ -1,11 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card";
 import { Switch } from "@/components/ui/switch";
-import { Shield, Bell, Plug, Database, Rss, Atom, KeyRound, RotateCw, Sparkles, Trash2 } from "lucide-react";
+import { Shield, Bell, Plug, Database, Rss, Atom, KeyRound, RotateCw, Sparkles, Trash2, Globe2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { seedDeterministic } from "@/lib/seed.functions";
+import { updateProfilePrefs } from "@/lib/prefs.functions";
+import { REGIONS, type RegionCode, usePrefs, refreshPrefs, formatMoney } from "@/lib/currency";
 
 export const Route = createFileRoute("/_app/settings")({
   ssr: false,
@@ -13,6 +15,7 @@ export const Route = createFileRoute("/_app/settings")({
 });
 
 const tabs = [
+  { k: "region", label: "Region & Currency", icon: Globe2 },
   { k: "data", label: "Demo Data", icon: Sparkles },
   { k: "roles", label: "User Roles", icon: Shield },
   { k: "notifs", label: "Notifications", icon: Bell },
@@ -22,9 +25,18 @@ const tabs = [
   { k: "quantum", label: "Quantum Policy", icon: Atom },
 ] as const;
 
+
 function SettingsPage() {
-  const [tab, setTab] = useState<typeof tabs[number]["k"]>("data");
+  const [tab, setTab] = useState<typeof tabs[number]["k"]>("region");
   const seed = useServerFn(seedDeterministic);
+  const updatePrefs = useServerFn(updateProfilePrefs);
+  const prefs = usePrefs();
+  const [region, setRegion] = useState<RegionCode>(prefs.region);
+  const [bank, setBank] = useState(prefs.bank);
+  const [currency, setCurrency] = useState(prefs.currency);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  useEffect(() => { setRegion(prefs.region); setBank(prefs.bank); setCurrency(prefs.currency); }, [prefs.region, prefs.bank, prefs.currency]);
+
   const [busy, setBusy] = useState<null | "seed" | "reset">(null);
 
   async function runSeed(scenario: "demo" | "high_risk" | "baseline" | "reset") {
