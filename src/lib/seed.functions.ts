@@ -11,7 +11,9 @@ import { z } from "zod";
 
 const Input = z.object({
   scenario: z.enum(["baseline", "high_risk", "reset", "demo"]).default("demo"),
+  currency: z.string().optional(),
 });
+
 
 // Fixed anchor: 2026-01-01T12:00:00Z. All seeded rows are offset from this.
 const SEED_ANCHOR = Date.parse("2026-01-01T12:00:00Z");
@@ -188,11 +190,16 @@ export const seedDeterministic = createServerFn({ method: "POST" })
     await supabaseAdmin.from("cyber_telemetry").insert(telemetry);
 
     // ---- 5. Transactions (30) + risk_scores + investigations + alerts ----
+    const seededCurrency = data.currency || "INR";
+    // FX multiplier to keep amounts realistic across currencies (very rough)
+    const fx: Record<string, number> = { USD: 1, INR: 85, EUR: 0.92, GBP: 0.78, AED: 3.67, SGD: 1.34, JPY: 155 };
+    const mult = fx[seededCurrency] ?? 1;
     const txRows = await Promise.all(
       Array.from({ length: 30 }, async (_, i) => {
         const cust = customers[i % customers.length];
         const isHighRisk = i < 8;
-        const amount = isHighRisk ? 15000 + Math.floor(rng() * 40000) : 50 + Math.floor(rng() * 4000);
+        const amountBase = isHighRisk ? 15000 + Math.floor(rng() * 40000) : 50 + Math.floor(rng() * 4000);
+        const amount = Math.round(amountBase * mult);
         const country = isHighRisk ? pick(rng, HIGH_RISK) : pick(rng, COUNTRIES);
         const channel = pick(rng, CHANNELS);
         const risk = isHighRisk ? 70 + Math.floor(rng() * 29) : Math.floor(rng() * 55);
@@ -201,7 +208,7 @@ export const seedDeterministic = createServerFn({ method: "POST" })
           id: await seedUuid(`tx:${i}`),
           customer_id: cust.id,
           amount,
-          currency: "USD",
+          currency: seededCurrency,
           channel,
           merchant: `seed:${pick(rng, MERCHANTS)}`,
           country,
@@ -212,6 +219,7 @@ export const seedDeterministic = createServerFn({ method: "POST" })
       }),
     );
     await supabaseAdmin.from("transactions").upsert(txRows);
+
 
     // risk_scores for every tx
     const riskScoreRows = txRows.map((t) => ({

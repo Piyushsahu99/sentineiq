@@ -149,8 +149,9 @@ export function Topbar({ onCommand, onCopilot, onMenu }: { onCommand: () => void
           </PopoverTrigger>
           <PopoverContent align="end" className="w-56 glass-strong border-white/8">
             <div className="text-xs text-muted-foreground px-1 pb-2 border-b border-white/6">{session.getEmail()}</div>
-            <button className="w-full mt-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-white/6"><User2 className="h-4 w-4" />Profile</button>
+            <button onClick={() => nav({ to: "/profile" })} className="w-full mt-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-white/6"><User2 className="h-4 w-4" />Profile</button>
             <button onClick={() => nav({ to: "/settings" })} className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-white/6"><Settings2 className="h-4 w-4" />Settings</button>
+
             <div className="border-t border-white/6 my-2" />
             <button
               onClick={async () => { await session.signOut(); nav({ to: "/auth/login" }); }}

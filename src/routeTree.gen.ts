@@ -23,6 +23,7 @@ import { Route as AppTelemetryRouteImport } from './routes/_app.telemetry'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuantumRouteImport } from './routes/_app.quantum'
+import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
 import { Route as AppGraphRouteImport } from './routes/_app.graph'
 import { Route as AppExplainableAiRouteImport } from './routes/_app.explainable-ai'
@@ -101,6 +102,11 @@ const AppQuantumRoute = AppQuantumRouteImport.update({
   path: '/quantum',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppInvestigationsRoute = AppInvestigationsRouteImport.update({
   id: '/investigations',
   path: '/investigations',
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/explainable-ai': typeof AppExplainableAiRoute
   '/graph': typeof AppGraphRoute
   '/investigations': typeof AppInvestigationsRoute
+  '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/explainable-ai': typeof AppExplainableAiRoute
   '/graph': typeof AppGraphRoute
   '/investigations': typeof AppInvestigationsRoute
+  '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/_app/explainable-ai': typeof AppExplainableAiRoute
   '/_app/graph': typeof AppGraphRoute
   '/_app/investigations': typeof AppInvestigationsRoute
+  '/_app/profile': typeof AppProfileRoute
   '/_app/quantum': typeof AppQuantumRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/explainable-ai'
     | '/graph'
     | '/investigations'
+    | '/profile'
     | '/quantum'
     | '/reports'
     | '/settings'
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/explainable-ai'
     | '/graph'
     | '/investigations'
+    | '/profile'
     | '/quantum'
     | '/reports'
     | '/settings'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/_app/explainable-ai'
     | '/_app/graph'
     | '/_app/investigations'
+    | '/_app/profile'
     | '/_app/quantum'
     | '/_app/reports'
     | '/_app/settings'
@@ -395,6 +407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuantumRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/investigations': {
       id: '/_app/investigations'
       path: '/investigations'
@@ -462,6 +481,7 @@ interface AppRouteChildren {
   AppExplainableAiRoute: typeof AppExplainableAiRoute
   AppGraphRoute: typeof AppGraphRoute
   AppInvestigationsRoute: typeof AppInvestigationsRoute
+  AppProfileRoute: typeof AppProfileRoute
   AppQuantumRoute: typeof AppQuantumRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -478,6 +498,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExplainableAiRoute: AppExplainableAiRoute,
   AppGraphRoute: AppGraphRoute,
   AppInvestigationsRoute: AppInvestigationsRoute,
+  AppProfileRoute: AppProfileRoute,
   AppQuantumRoute: AppQuantumRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -514,13 +535,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

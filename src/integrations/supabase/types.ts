@@ -541,22 +541,31 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bank: string
           created_at: string
+          currency: string
           display_name: string | null
           email: string | null
           id: string
+          region: string
         }
         Insert: {
+          bank?: string
           created_at?: string
+          currency?: string
           display_name?: string | null
           email?: string | null
           id: string
+          region?: string
         }
         Update: {
+          bank?: string
           created_at?: string
+          currency?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          region?: string
         }
         Relationships: []
       }
@@ -852,6 +861,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tx_check_history: {
+        Row: {
+          amount_local: number | null
+          country: string | null
+          created_at: string
+          currency: string | null
+          id: string
+          merchant: string | null
+          risk_score: number | null
+          signals: Json | null
+          transaction_id: string | null
+          user_id: string | null
+          verdict: string
+        }
+        Insert: {
+          amount_local?: number | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          merchant?: string | null
+          risk_score?: number | null
+          signals?: Json | null
+          transaction_id?: string | null
+          user_id?: string | null
+          verdict: string
+        }
+        Update: {
+          amount_local?: number | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          merchant?: string | null
+          risk_score?: number | null
+          signals?: Json | null
+          transaction_id?: string | null
+          user_id?: string | null
+          verdict?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
