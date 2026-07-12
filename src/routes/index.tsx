@@ -68,9 +68,9 @@ function Landing() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-[ticker_6s_linear_infinite] opacity-60" />
 
       {/* Nav */}
-      <header className="relative z-20 px-4 sm:px-6 md:px-10 py-4 sm:py-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0"><Logo /></div>
-        <nav className="hidden md:flex items-center gap-7 text-xs text-muted-foreground justify-self-center">
+      <header className="relative z-20 px-4 sm:px-6 md:px-10 py-4 sm:py-5 flex items-center justify-between gap-3">
+        <div className="min-w-0 shrink-0"><Logo /></div>
+        <nav className="hidden md:flex items-center gap-7 text-xs text-muted-foreground">
           <a href="#platform" className="hover:text-foreground transition">Platform</a>
           <a href="#modules" className="hover:text-foreground transition">Modules</a>
           <a href="#workflow" className="hover:text-foreground transition">Workflow</a>
