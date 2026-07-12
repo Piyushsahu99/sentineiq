@@ -384,6 +384,10 @@ export const submitFeedback = createServerFn({ method: "POST" })
       const { data: a } = await supabaseAdmin.from("alerts").select("customer_id").eq("id", data.alertId).maybeSingle();
       customerId = a?.customer_id ?? null;
     }
+    if (!customerId && data.investigationId) {
+      const { data: inv } = await supabaseAdmin.from("ai_investigations").select("customer_id").eq("id", data.investigationId).maybeSingle();
+      customerId = inv?.customer_id ?? null;
+    }
 
     await supabaseAdmin.from("analyst_feedback").insert({
       alert_id: data.alertId ?? null, investigation_id: data.investigationId ?? null,
@@ -396,9 +400,9 @@ export const submitFeedback = createServerFn({ method: "POST" })
       const since = new Date(Date.now() - 7 * 86400_000).toISOString();
       const { data: fps } = await supabaseAdmin
         .from("analyst_feedback")
-        .select("id, alert:alerts!inner(customer_id)")
+        .select("id, alert:alerts(customer_id), investigation:ai_investigations(customer_id)")
         .eq("signal_id", data.signalId).eq("verdict", "false_positive").gte("created_at", since);
-      const relevant = (fps ?? []).filter((f: any) => f.alert?.customer_id === customerId).length;
+      const relevant = (fps ?? []).filter((f: any) => (f.alert?.customer_id === customerId) || (f.investigation?.customer_id === customerId)).length;
       if (relevant >= 3) {
         await supabaseAdmin.from("suppressions").insert({
           signal_id: data.signalId, customer_id: customerId,
