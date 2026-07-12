@@ -44,7 +44,7 @@ function XAIPage() {
   const qc = useQueryClient();
   const submit = useServerFn(submitFeedback);
 
-  const { data: investigations } = useQuery({
+  const { data: investigations, isLoading } = useQuery({
     queryKey: ["xai-investigations"],
     queryFn: async () => {
       const { data } = await supabase.from("ai_investigations")
@@ -63,6 +63,10 @@ function XAIPage() {
     onSuccess: () => { toast.success("Feedback recorded"); qc.invalidateQueries({ queryKey: ["xai-investigations"] }); },
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
+
+  if (isLoading) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading investigations…</div>;
+  }
 
   if (!investigations?.length) {
     return <div className="p-6 text-sm text-muted-foreground">No investigations yet. Trigger a correlation from the Transactions page or run a proactive scan from the Alerts page.</div>;
