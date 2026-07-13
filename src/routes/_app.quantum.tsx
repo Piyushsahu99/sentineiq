@@ -4,12 +4,14 @@ import { RiskBadge } from "@/components/sq/risk";
 import { ProgressRing } from "@/components/sq/progress-ring";
 import { cryptoAssets, quantumRoadmap, kpis } from "@/lib/mock/data";
 import { Atom, ShieldCheck, Clock } from "lucide-react";
+import { usePrefs, formatCompact } from "@/lib/currency";
 
 export const Route = createFileRoute("/_app/quantum")({
   component: QuantumPage,
 });
 
 function QuantumPage() {
+  const prefs = usePrefs();
   const hndlTotal = cryptoAssets.reduce((s, a) => s + a.hndl, 0);
   return (
     <div>
