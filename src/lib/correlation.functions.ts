@@ -57,17 +57,18 @@ function runRules(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>): Signal
     signals.push({
       id: "fraud.velocity_1h", kind: "fraud", name: `Velocity: ${recentHour.length} txs in the last hour`,
       weight: 10 + recentHour.length, confidence: 85,
-      evidence: recentHour.slice(0, 5).map((t: any) => ({ source: "transactions", ref_id: t.id, ts: t.created_at, note: `$${t.amount} ${t.channel}` })),
+      evidence: recentHour.slice(0, 5).map((t: any) => ({ source: "transactions", ref_id: t.id, ts: t.created_at, note: `${t.currency || ""} ${t.amount} ${t.channel}`.trim() })),
     });
   }
 
-  // structuring: multiple txs just under $10k
+  // structuring: multiple txs just under a ~10k round threshold in tx currency
   const structuring = ctx.recentTx.filter((t: any) => Number(t.amount) >= 8500 && Number(t.amount) < 10000);
   if (structuring.length >= 2) {
+    const cur = structuring[0]?.currency || tx.currency || "";
     signals.push({
-      id: "fraud.structuring_9k", kind: "fraud", name: `Structuring pattern: ${structuring.length} txs at $8.5k–$10k`,
+      id: "fraud.structuring_9k", kind: "fraud", name: `Structuring pattern: ${structuring.length} txs at 8.5k–10k ${cur}`.trim(),
       weight: 15, confidence: 82,
-      evidence: structuring.slice(0, 4).map((t: any) => ({ source: "transactions", ref_id: t.id, ts: t.created_at, note: `$${t.amount}` })),
+      evidence: structuring.slice(0, 4).map((t: any) => ({ source: "transactions", ref_id: t.id, ts: t.created_at, note: `${t.currency || ""} ${t.amount}`.trim() })),
     });
   }
 

@@ -4,10 +4,11 @@ import { Sparkles, X, Send, Loader2, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
 import { askCopilot } from "@/lib/copilot.functions";
+import { usePrefs, formatMoney } from "@/lib/currency";
 
-const suggestions = [
+const buildSuggestions = (wireExample: string) => [
   "Summarize today's critical alerts",
-  "Why was the $48,500 wire blocked?",
+  `Why was the ${wireExample} wire blocked?`,
   "Recommend actions for the top investigation",
   "Draft an executive summary of tonight's incidents",
   "Which customers are trending high-risk?",
@@ -24,6 +25,8 @@ export function CopilotDock({ open, onOpenChange, seedPrompt }: { open: boolean;
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const prefs = usePrefs();
+  const suggestions = buildSuggestions(formatMoney(48500, prefs));
 
   async function send(text: string) {
     if (!text.trim() || thinking) return;

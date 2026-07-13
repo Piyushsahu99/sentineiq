@@ -4,12 +4,14 @@ import { RiskBadge } from "@/components/sq/risk";
 import { ProgressRing } from "@/components/sq/progress-ring";
 import { cryptoAssets, quantumRoadmap, kpis } from "@/lib/mock/data";
 import { Atom, ShieldCheck, Clock } from "lucide-react";
+import { usePrefs, formatCompact } from "@/lib/currency";
 
 export const Route = createFileRoute("/_app/quantum")({
   component: QuantumPage,
 });
 
 function QuantumPage() {
+  const prefs = usePrefs();
   const hndlTotal = cryptoAssets.reduce((s, a) => s + a.hndl, 0);
   return (
     <div>
@@ -33,15 +35,15 @@ function QuantumPage() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">HNDL Exposure</div>
-              <div className="text-3xl font-mono mt-1">${(hndlTotal/1_000_000).toFixed(1)}M</div>
+              <div className="text-3xl font-mono mt-1">{formatCompact(hndlTotal, prefs)}</div>
               <div className="text-[11px] text-muted-foreground mt-1">Long-term sensitive data protected by pre-quantum crypto</div>
             </div>
             <div className="h-10 w-10 rounded-xl grid place-items-center hairline bg-rose-500/10 text-rose-300"><Clock className="h-5 w-5" /></div>
           </div>
           <div className="mt-4 space-y-1.5 text-xs">
-            <div className="flex justify-between"><span>Client PII (7y retention)</span><span className="font-mono">$210M</span></div>
-            <div className="flex justify-between"><span>Wire audit trail (10y)</span><span className="font-mono">$340M</span></div>
-            <div className="flex justify-between"><span>Contracts &amp; loan docs</span><span className="font-mono">$88M</span></div>
+            <div className="flex justify-between"><span>Client PII (7y retention)</span><span className="font-mono">{formatCompact(210_000_000, prefs)}</span></div>
+            <div className="flex justify-between"><span>Wire audit trail (10y)</span><span className="font-mono">{formatCompact(340_000_000, prefs)}</span></div>
+            <div className="flex justify-between"><span>Contracts &amp; loan docs</span><span className="font-mono">{formatCompact(88_000_000, prefs)}</span></div>
           </div>
         </GlassCard>
 
