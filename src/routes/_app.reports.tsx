@@ -19,6 +19,8 @@ const reports = [
 function ReportsPage() {
   const [sel, setSel] = useState<typeof reports[number]["k"]>("exec");
   const r = reports.find((x) => x.k === sel)!;
+  const prefs = usePrefs();
+  const fraudPrevented = formatCompact(24_600_000, prefs);
 
   return (
     <div>
