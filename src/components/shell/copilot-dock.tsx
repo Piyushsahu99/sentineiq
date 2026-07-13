@@ -25,6 +25,8 @@ export function CopilotDock({ open, onOpenChange, seedPrompt }: { open: boolean;
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const prefs = usePrefs();
+  const suggestions = buildSuggestions(formatMoney(48500, prefs));
 
   async function send(text: string) {
     if (!text.trim() || thinking) return;
