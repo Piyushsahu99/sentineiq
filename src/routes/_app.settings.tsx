@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { seedDeterministic } from "@/lib/seed.functions";
 import { updateProfilePrefs } from "@/lib/prefs.functions";
-import { REGIONS, type RegionCode, usePrefs, refreshPrefs, formatMoney } from "@/lib/currency";
+import { REGIONS, type RegionCode, usePrefs, refreshPrefs, formatMoney, formatCompact } from "@/lib/currency";
 
 export const Route = createFileRoute("/_app/settings")({
   ssr: false,
