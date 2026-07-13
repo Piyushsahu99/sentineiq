@@ -3,6 +3,7 @@ import { useState } from "react";
 import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card";
 import { FileText, Shield, DollarSign, Briefcase, ScrollText, Download } from "lucide-react";
 import { toast } from "sonner";
+import { usePrefs, formatCompact } from "@/lib/currency";
 
 export const Route = createFileRoute("/_app/reports")({
   component: ReportsPage,
