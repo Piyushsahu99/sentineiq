@@ -296,7 +296,7 @@ function SettingsPage() {
                 <PolicyRow label="Deprecate RSA-2048" value="2027-01-01 (hard cutoff)" />
                 <PolicyRow label="PQC target algorithm" value="Hybrid Kyber-1024 + X25519" />
                 <PolicyRow label="Dilithium migration deadline" value="2027-Q4" />
-                <PolicyRow label="HNDL alerting threshold" value="$10M exposure per asset class" />
+                <PolicyRow label="HNDL alerting threshold" value={`${formatCompact(10_000_000, { currency, region, locale: REGIONS[region].locale, bank })} exposure per asset class`} />
               </div>
             </GlassCard>
           )}
