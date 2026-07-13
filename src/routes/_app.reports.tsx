@@ -71,7 +71,7 @@ function ReportsPage() {
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">Executive summary</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 SentinelQ processed <b className="text-foreground">8.94M</b> transactions and <b className="text-foreground">148K</b> security events this period.
-                <b className="text-foreground"> 42 critical threats</b> were auto-mitigated, preventing an estimated <b className="text-foreground">$24.6M</b> in fraud losses.
+                <b className="text-foreground"> 42 critical threats</b> were auto-mitigated, preventing an estimated <b className="text-foreground">{fraudPrevented}</b> in fraud losses.
                 False-positive rate reduced by <b className="text-foreground">78%</b> vs prior quarter. Quantum readiness is at <b className="text-foreground">62%</b>,
                 ahead of the industry benchmark (41%).
               </p>
@@ -79,7 +79,7 @@ function ReportsPage() {
 
             <section className="mb-6 grid grid-cols-3 gap-3">
               {[
-                { l: "Fraud Prevented", v: "$24.6M" },
+                { l: "Fraud Prevented", v: fraudPrevented },
                 { l: "Critical Alerts", v: "42" },
                 { l: "MTTD / MTTR", v: "3m / 11m" },
               ].map((k) => (
