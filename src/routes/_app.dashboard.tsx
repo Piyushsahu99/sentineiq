@@ -150,7 +150,7 @@ function Dashboard() {
         </GlassCard>
 
         <GlassCard className="col-span-12 xl:col-span-8">
-          <SectionHeader title="Fraud Trends" description="Attempted vs prevented ($) — 30 days" action={<span className="text-xs text-emerald-400 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> +18% prevention</span>} />
+          <SectionHeader title="Fraud Trends" description={`Attempted vs prevented (${prefs.currency}) — 30 days`} action={<span className="text-xs text-emerald-400 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> +18% prevention</span>} />
           <div className="h-64">
             <ResponsiveContainer>
               <AreaChart data={fraudTrend}>
