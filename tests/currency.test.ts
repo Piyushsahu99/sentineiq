@@ -23,18 +23,18 @@ const SYMBOLS: Record<string, string[]> = {
 
 describe("formatMoney symbol per region", () => {
   for (const [code, region] of Object.entries(REGIONS)) {
-    it(`${code} → ${region.currency} uses "${SYMBOLS[code]}"`, () => {
+    it(`${code} → ${region.currency} uses one of ${SYMBOLS[code].join("/")}`, () => {
       const out = formatMoney(1234, { region: code as any, currency: region.currency, locale: region.locale, bank: region.banks[0] });
-      expect(out).toContain(SYMBOLS[code]);
+      expect(SYMBOLS[code].some((s) => out.includes(s))).toBe(true);
     });
   }
 });
 
 describe("formatCompact matches formatMoney currency", () => {
   for (const [code, region] of Object.entries(REGIONS)) {
-    it(`${code} compact output contains ${SYMBOLS[code]}`, () => {
+    it(`${code} compact output carries the currency symbol`, () => {
       const out = formatCompact(2_500_000, { region: code as any, currency: region.currency, locale: region.locale, bank: region.banks[0] });
-      expect(out).toContain(SYMBOLS[code]);
+      expect(SYMBOLS[code].some((s) => out.includes(s))).toBe(true);
       expect(out.length).toBeLessThan(20);
     });
   }
