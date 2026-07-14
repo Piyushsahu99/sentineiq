@@ -17,8 +17,8 @@ vi.mock("@/integrations/supabase/client", () => ({
 const { REGIONS, formatMoney, formatCompact, DEFAULT_PREFS } = await import("../src/lib/currency");
 
 // Symbol each region MUST render for a positive integer amount.
-const SYMBOLS: Record<string, string> = {
-  IN: "₹", US: "$", EU: "€", GB: "£", AE: "AED", SG: "$", JP: "¥",
+const SYMBOLS: Record<string, string[]> = {
+  IN: ["₹"], US: ["$"], EU: ["€"], GB: ["£"], AE: ["AED"], SG: ["$"], JP: ["¥", "￥"],
 };
 
 describe("formatMoney symbol per region", () => {
