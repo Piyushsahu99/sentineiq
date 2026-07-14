@@ -82,7 +82,7 @@ function QuantumPage() {
                   <td className="px-4 py-2.5 font-medium text-sm">{a.asset}</td>
                   <td className="px-4 py-2.5 font-mono">{a.count.toLocaleString()}</td>
                   <td className="px-4 py-2.5"><RiskBadge severity={a.risk} /></td>
-                  <td className="px-4 py-2.5 font-mono">${(a.hndl/1_000_000).toFixed(1)}M</td>
+                  <td className="px-4 py-2.5 font-mono">{formatCompact(a.hndl, prefs)}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground">{a.risk === "critical" ? "Immediate deprecation" : a.risk === "high" ? "Migrate to hybrid PQC" : a.risk === "medium" ? "Plan Q2 rotation" : "Monitor"}</td>
                 </tr>
               ))}
