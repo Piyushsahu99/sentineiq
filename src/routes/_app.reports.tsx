@@ -93,7 +93,7 @@ function ReportsPage() {
             <section className="mb-6">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">Notable incidents</h2>
               <ol className="list-decimal ml-5 space-y-1 text-sm text-muted-foreground">
-                <li>INV-2447 — Coordinated APP fraud attempt (€482K) attributed to FIN7-Wire-24Q4. Blocked.</li>
+                <li>INV-2447 — Coordinated APP fraud attempt ({formatCompact(482_000, prefs)}) attributed to FIN7-Wire-24Q4. Blocked.</li>
                 <li>INV-2445 — APT beaconing on core-banking segment. 3 endpoints isolated.</li>
                 <li>INV-2442 — Insider staging attempt on treasury desk. Contained.</li>
               </ol>
