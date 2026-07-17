@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, GitBranch, FileSearch2, Coins, Radar, Globe2, Atom, Users, Brain,
-  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield,
+  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield, Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/sq/logo";
@@ -18,6 +18,7 @@ const nav = [
     { to: "/alerts", label: "Alert Center", icon: Bell, kbd: "A", badge: 12 },
   ]},
   { section: "Analytics", items: [
+    { to: "/ingest", label: "Bank Data Ingest", icon: Upload, badge: "NEW" },
     { to: "/transactions", label: "Transaction Analytics", icon: Coins },
     { to: "/telemetry", label: "Cybersecurity Telemetry", icon: Radar },
     { to: "/threat-intel", label: "Threat Intelligence", icon: Globe2 },
