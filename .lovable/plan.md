@@ -1,65 +1,48 @@
-## Goal
-Add region/bank/currency preferences (India + INR default), rebuild Profile with a transaction checking history, upgrade Settings, and refresh Landing + Settings + Profile copy to match.
 
-## 1. Database
-New migration:
-- `public.profiles`: add `region text default 'IN'`, `bank text default 'HDFC Bank'`, `currency text default 'INR'` (NOT NULL with defaults). Backfill existing rows.
-- New `public.tx_check_history` table: `id, user_id, transaction_id, verdict, risk_score, signals jsonb, currency, amount_local, created_at`. RLS: user reads own; analysts read all. GRANT to authenticated + service_role.
-- Trigger (or explicit insert from `correlateTransaction`) writes a row every time a correlation runs.
+# Bank Data Ingestion + AI Analysis Upgrade
 
-## 2. Currency engine
-- `src/lib/currency.ts`: static rate table (USD base) for INR, USD, EUR, GBP, AED, SGD, JPY. Helpers `formatMoney(amount, currency)`, `convert(amount, from, to)`. Symbols: ₹ default.
-- `src/lib/prefs.ts` + React `usePrefs()` hook: loads region/bank/currency from `profiles`, caches like `session.ts`, exposes `format(amount)`.
-- Replace every hardcoded `$` / `USD` in dashboard KPIs, transactions table, reports, alerts, investigations with `format()`.
-- Extend `seedDeterministic` to accept `{ currency, region }`; seeded amounts stored in tenant currency. Re-seed on currency change with a confirm dialog.
+Goal: let a bank paste/upload real transaction + telemetry data, run the full correlation + Gemini-powered AI analysis on it, and see real, per-row results (risk score, signals, verdict, recommended actions) in a clean, user-friendly workflow.
 
-## 3. Settings — new "Region & Currency" tab (first tab)
-- Region select (India default, 10 countries). Bank select filtered by region (India: HDFC, ICICI, SBI, Axis, Kotak; US: Chase, BoA, Wells Fargo; etc.). Currency select (auto-suggests region's currency; user can override).
-- Save button → updates `profiles`, invalidates prefs, offers "Re-seed demo data in new currency".
-- Reorder tabs: Region & Currency → Demo Data → Roles → Notifications → API → SIEM → Feeds → Quantum.
-- Polish existing tabs: consistent spacing, real switches wired to local state, remove `Math.random()` in feeds/SIEM (use deterministic seeded values).
+## 1. New "Ingest" workspace (`/ingest`)
+A single page under `_authenticated` with three tabs:
 
-## 4. Profile page (new route `/_app/profile`)
-Tabs:
-- **Overview**: avatar, name, email, role, region/bank/currency chips, edit display name.
-- **Checking history**: paginated table from `tx_check_history` — timestamp, tx id, merchant, amount (formatted in tenant currency), risk, verdict, signals count. Filters: verdict, date range. Row click → opens Explainable AI for that check.
-- **Security**: last login, MFA status, sign-out all sessions button.
-Add Profile link to sidebar + topbar user menu.
+- **Paste JSON** — textarea accepting either a single object or an array of `{ txn_id, user_id, amount, merchant, location, device, currency? }` for transactions, and `{ user, event, ip, device, ts? }` for cyber events. Sample payloads prefilled.
+- **Upload CSV** — drag-and-drop `.csv` for `transactions.csv` and `cyber_events.csv`. Client parses with `papaparse`, previews first 10 rows, maps columns, then submits.
+- **Bulk demo** — reuses existing `seedDeterministic` for one-click demos.
 
-## 5. Landing page content refresh
-- Hero subhead mentions "Built for Indian banks with multi-region support (INR default, USD/EUR/GBP/AED ready)".
-- New FAQ entries: "Which currencies and regions are supported?", "Does it work for Indian banks (RBI/UPI context)?", "How is checking history retained?".
-- Update pillar copy to reflect India-first framing without removing global capability.
+After submit, page shows a live **Analysis Results** table: each row = one ingested transaction with composite score, dominant kind (fraud/cyber/xcorr/quantum), verdict badge (approved/pending/blocked), top 3 signals, and a "View investigation" link into `/explainable-ai`.
 
-## 6. Workflow tightening
-- Auth flow: after role-select, if profile has no region → route to `/auth/region-select` (new lightweight step) → dashboard. Existing users skip (India/INR default already backfilled).
-- Correlation server fn writes to `tx_check_history` after each run.
-- Sidebar: add "Profile" and rename "Settings" section grouping.
+## 2. Server functions (all in `src/lib/ingest.functions.ts`)
+- `ingestBankBatch({ transactions[], cyberEvents[] })` — analyst-only, uses `requireSupabaseAuth`:
+  1. Upsert customers by `user_id` (creates minimal customer row if missing, respecting user's `region`/`currency` from profile).
+  2. Insert `cyber_telemetry` rows from events (map `event`→message, severity heuristic: VPN/Tor/impossible travel → high; malware/beacon → critical; else medium).
+  3. Insert `transactions` rows, then invoke existing `correlateTransaction` per tx.
+  4. Collect results and return `{ results: [{ txn_id, composite, verdict, dominant_kind, top_signals, investigation_id }] }`.
+- `explainWithAI({ investigationId })` — calls Lovable AI Gateway (Gemini 2.5 Flash) with the signals + evidence, returns a natural-language narrative + recommended next steps, persisted onto `ai_investigations.ai_narrative` (new nullable column).
 
-## Files touched
-```
-supabase migration (profiles cols + tx_check_history + policies + grants)
-src/lib/currency.ts                 (new)
-src/lib/prefs.ts                    (new)
-src/lib/seed.functions.ts           (currency-aware)
-src/lib/correlation.functions.ts    (write tx_check_history)
-src/routes/_app.settings.tsx        (new tab, reorder, polish)
-src/routes/_app.profile.tsx         (new)
-src/routes/auth.region-select.tsx   (new, optional gate)
-src/routes/_app.tsx                 (region gate check)
-src/routes/_app.dashboard.tsx       (format money)
-src/routes/_app.transactions.tsx    (format money)
-src/routes/_app.reports.tsx         (format money)
-src/routes/_app.alerts.tsx          (format money)
-src/routes/_app.investigations.tsx  (format money)
-src/routes/index.tsx                (landing copy + FAQ)
-src/components/shell/sidebar.tsx    (Profile link)
-src/components/shell/topbar.tsx     (Profile in user menu)
-```
+## 3. AI enhancement
+Extend the correlation output with a Gemini pass that turns the signal tree into:
+- Plain-English "what happened" paragraph
+- Ranked recommended actions tuned to the region/bank/currency
+- Confidence rationale
+Rendered as a collapsible "AI Explanation" card in the results table and on the Explainable AI investigation detail.
 
-## Not in scope
-- Live FX rates (using static table; documented in Settings).
-- Full content rewrite of the other 10 protected routes — only money formatting there.
-- Admin UI to change another user's region.
+## 4. Schema change (single migration)
+- `ALTER TABLE ai_investigations ADD COLUMN ai_narrative jsonb` (nullable). No new tables. Grants unchanged.
 
-Approve to build.
+## 5. UX polish
+- Sidebar: add "Ingest" entry with upload icon, above Transactions.
+- Empty states on Dashboard/Transactions link to `/ingest` when zero rows exist for the tenant.
+- Toasts for per-row success/failure, with a downloadable JSON of results.
+- Non-analyst roles see a read-only view with a "Request analyst access" note (avoids silent 403s).
+
+## 6. Non-goals
+- No FastAPI, no new external services.
+- No changes to auth, RLS on existing tables, or currency logic beyond reading `profiles.currency` when creating customers.
+- No changes to Threat Map, Quantum, or Reports pages (they already consume the same tables and will light up automatically once real data flows in).
+
+## Technical notes
+- CSV parsing: `bun add papaparse` (client-only import).
+- AI call: use existing `LOVABLE_API_KEY` via `google/gemini-2.5-flash` (fast tier). Wrapped in try/catch — correlation still succeeds if AI narrative fails.
+- Batch size cap: 200 transactions per request to stay inside Worker CPU budget; larger uploads chunked client-side with progress bar.
+- All inserts go through `supabaseAdmin` (loaded inside handler) after `is_analyst` check, so RLS on `transactions` INSERT policy is unaffected.
