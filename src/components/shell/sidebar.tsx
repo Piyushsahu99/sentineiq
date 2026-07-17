@@ -18,6 +18,7 @@ const nav = [
     { to: "/alerts", label: "Alert Center", icon: Bell, kbd: "A", badge: 12 },
   ]},
   { section: "Analytics", items: [
+    { to: "/ingest", label: "Bank Data Ingest", icon: Upload, badge: "NEW" },
     { to: "/transactions", label: "Transaction Analytics", icon: Coins },
     { to: "/telemetry", label: "Cybersecurity Telemetry", icon: Radar },
     { to: "/threat-intel", label: "Threat Intelligence", icon: Globe2 },
