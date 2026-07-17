@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, GitBranch, FileSearch2, Coins, Radar, Globe2, Atom, Users, Brain,
-  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield,
+  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield, Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/sq/logo";

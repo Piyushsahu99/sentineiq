@@ -25,6 +25,7 @@ import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuantumRouteImport } from './routes/_app.quantum'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
+import { Route as AppIngestRouteImport } from './routes/_app.ingest'
 import { Route as AppGraphRouteImport } from './routes/_app.graph'
 import { Route as AppExplainableAiRouteImport } from './routes/_app.explainable-ai'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -112,6 +113,11 @@ const AppInvestigationsRoute = AppInvestigationsRouteImport.update({
   path: '/investigations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIngestRoute = AppIngestRouteImport.update({
+  id: '/ingest',
+  path: '/ingest',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppGraphRoute = AppGraphRouteImport.update({
   id: '/graph',
   path: '/graph',
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/explainable-ai': typeof AppExplainableAiRoute
   '/graph': typeof AppGraphRoute
+  '/ingest': typeof AppIngestRoute
   '/investigations': typeof AppInvestigationsRoute
   '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/explainable-ai': typeof AppExplainableAiRoute
   '/graph': typeof AppGraphRoute
+  '/ingest': typeof AppIngestRoute
   '/investigations': typeof AppInvestigationsRoute
   '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/explainable-ai': typeof AppExplainableAiRoute
   '/_app/graph': typeof AppGraphRoute
+  '/_app/ingest': typeof AppIngestRoute
   '/_app/investigations': typeof AppInvestigationsRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/quantum': typeof AppQuantumRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/explainable-ai'
     | '/graph'
+    | '/ingest'
     | '/investigations'
     | '/profile'
     | '/quantum'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/explainable-ai'
     | '/graph'
+    | '/ingest'
     | '/investigations'
     | '/profile'
     | '/quantum'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/explainable-ai'
     | '/_app/graph'
+    | '/_app/ingest'
     | '/_app/investigations'
     | '/_app/profile'
     | '/_app/quantum'
@@ -421,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInvestigationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/ingest': {
+      id: '/_app/ingest'
+      path: '/ingest'
+      fullPath: '/ingest'
+      preLoaderRoute: typeof AppIngestRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/graph': {
       id: '/_app/graph'
       path: '/graph'
@@ -480,6 +499,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppExplainableAiRoute: typeof AppExplainableAiRoute
   AppGraphRoute: typeof AppGraphRoute
+  AppIngestRoute: typeof AppIngestRoute
   AppInvestigationsRoute: typeof AppInvestigationsRoute
   AppProfileRoute: typeof AppProfileRoute
   AppQuantumRoute: typeof AppQuantumRoute
@@ -497,6 +517,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppExplainableAiRoute: AppExplainableAiRoute,
   AppGraphRoute: AppGraphRoute,
+  AppIngestRoute: AppIngestRoute,
   AppInvestigationsRoute: AppInvestigationsRoute,
   AppProfileRoute: AppProfileRoute,
   AppQuantumRoute: AppQuantumRoute,
