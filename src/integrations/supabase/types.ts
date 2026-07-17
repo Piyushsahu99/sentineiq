@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       ai_investigations: {
         Row: {
+          ai_narrative: Json | null
           attack_type: string | null
           business_impact: number | null
           calibrated_confidence: number | null
@@ -34,6 +35,7 @@ export type Database = {
           transaction_id: string | null
         }
         Insert: {
+          ai_narrative?: Json | null
           attack_type?: string | null
           business_impact?: number | null
           calibrated_confidence?: number | null
@@ -52,6 +54,7 @@ export type Database = {
           transaction_id?: string | null
         }
         Update: {
+          ai_narrative?: Json | null
           attack_type?: string | null
           business_impact?: number | null
           calibrated_confidence?: number | null

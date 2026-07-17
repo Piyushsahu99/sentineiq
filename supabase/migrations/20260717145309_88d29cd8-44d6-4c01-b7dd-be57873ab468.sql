@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_investigations ADD COLUMN IF NOT EXISTS ai_narrative jsonb;
