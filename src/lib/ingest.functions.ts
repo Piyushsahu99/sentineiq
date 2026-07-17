@@ -173,7 +173,8 @@ export const ingestBankBatch = createServerFn({ method: "POST" })
 // Inline runner mirroring correlateTransaction so we can call it in a loop
 // without going through the RPC layer (server fns aren't callable server-side).
 async function runCorrelationInline(supabaseAdmin: any, txId: string) {
-  const [{ loadCtx, rules, applyS }] = await Promise.all([importInline()]);
+  const [helpers] = await importInline();
+  const { loadCtx, rules, applyS } = helpers;
   const { data: tx } = await supabaseAdmin.from("transactions").select("*").eq("id", txId).maybeSingle();
   if (!tx) throw new Error("tx not found post-insert");
   const ctx = await loadCtx(supabaseAdmin, tx);
