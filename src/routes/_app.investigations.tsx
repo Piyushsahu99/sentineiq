@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card";
 import { formatDistanceToNow } from "date-fns";
 import { useInvestigations } from "@/lib/live-queries";
-import { FileSearch2 } from "lucide-react";
+import { FileSearch2, Upload } from "lucide-react";
+import { usePrefs, formatMoney } from "@/lib/currency";
 
 export const Route = createFileRoute("/_app/investigations")({
   ssr: false,
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/_app/investigations")({
 
 function InvPage() {
   const { data: invs = [], isLoading } = useInvestigations();
+  const prefs = usePrefs();
 
   return (
     <div>
