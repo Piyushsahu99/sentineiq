@@ -66,7 +66,7 @@ function BehaviorPage() {
               <Stat icon={<MapPin className="h-4 w-4" />} label="Typical Location" value={sel.location} />
               <Stat icon={<Smartphone className="h-4 w-4" />} label="Trusted Devices" value={String(sel.trustedDevices)} />
               <Stat icon={<Clock className="h-4 w-4" />} label="Active Hour" value={`${sel.activeHour}:00`} />
-              <Stat icon={<TrendingUp className="h-4 w-4" />} label="Avg Amount" value={`$${sel.avgAmount.toLocaleString()}`} />
+              <Stat icon={<TrendingUp className="h-4 w-4" />} label="Avg Amount" value={formatMoney(sel.avgAmount, prefs)} />
             </div>
           </GlassCard>
 
