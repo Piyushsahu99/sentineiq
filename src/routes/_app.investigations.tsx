@@ -50,7 +50,7 @@ function InvPage() {
               ))}
             </div>
             <div className="mt-3 flex items-center justify-between">
-              <div className="text-[11px] text-muted-foreground">Impact: <span className="text-foreground font-mono">${Number(i.business_impact ?? 0).toLocaleString()}</span></div>
+              <div className="text-[11px] text-muted-foreground">Impact: <span className="text-foreground font-mono">{formatMoney(Number(i.business_impact ?? 0), prefs)}</span></div>
               <Link to="/correlation" className="text-[11px] text-cyan-300 hover:underline">Open in Correlation →</Link>
             </div>
           </GlassCard>
