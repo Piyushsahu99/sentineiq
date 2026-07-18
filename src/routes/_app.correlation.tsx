@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CheckCircle2, ShieldAlert } from "lucide-react";
+import { usePrefs, formatMoney } from "@/lib/currency";
 
 export const Route = createFileRoute("/_app/correlation")({
   ssr: false,
