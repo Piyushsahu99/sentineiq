@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card";
 import { RiskBar, RiskBadge } from "@/components/sq/risk";
 import { formatDistanceToNow } from "date-fns";
