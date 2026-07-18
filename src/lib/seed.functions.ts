@@ -90,7 +90,9 @@ const INVESTIGATIONS = [
 export const seedDeterministic = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => Input.parse(raw))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { data: analyst } = await context.supabase.rpc("is_analyst", { _user_id: context.userId });
+    if (!analyst) throw new Error("Forbidden: analyst role required to seed demo data");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // ---- 1. Wipe prior seed rows (markers) ----

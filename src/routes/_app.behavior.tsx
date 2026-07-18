@@ -4,6 +4,7 @@ import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card
 import { customers } from "@/lib/mock/data";
 import { RiskBar } from "@/components/sq/risk";
 import { Search, User2, MapPin, Smartphone, Clock, TrendingUp } from "lucide-react";
+import { usePrefs, formatMoney } from "@/lib/currency";
 import { Sparkline } from "@/components/sq/sparkline";
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 
@@ -15,6 +16,7 @@ const tooltipStyle = { background: "rgba(20,25,45,0.9)", border: "1px solid rgba
 
 function BehaviorPage() {
   const [sel, setSel] = useState(customers[0]);
+  const prefs = usePrefs();
   const trend = Array.from({ length: 30 }, (_, i) => ({ d: i, risk: Math.round(20 + Math.sin(i/3)*10 + Math.random()*20 + (i > 24 ? (i-24)*8 : 0)) }));
 
   return (
@@ -64,7 +66,7 @@ function BehaviorPage() {
               <Stat icon={<MapPin className="h-4 w-4" />} label="Typical Location" value={sel.location} />
               <Stat icon={<Smartphone className="h-4 w-4" />} label="Trusted Devices" value={String(sel.trustedDevices)} />
               <Stat icon={<Clock className="h-4 w-4" />} label="Active Hour" value={`${sel.activeHour}:00`} />
-              <Stat icon={<TrendingUp className="h-4 w-4" />} label="Avg Amount" value={`$${sel.avgAmount.toLocaleString()}`} />
+              <Stat icon={<TrendingUp className="h-4 w-4" />} label="Avg Amount" value={formatMoney(sel.avgAmount, prefs)} />
             </div>
           </GlassCard>
 
