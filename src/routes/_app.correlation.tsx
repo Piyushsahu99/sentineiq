@@ -19,6 +19,7 @@ type EvidenceItem = { ts?: string; source?: string; event?: string; weight?: num
 
 function CorrelationPage() {
   const { data: inv, isLoading } = useLatestInvestigation();
+  const prefs = usePrefs();
   const [selIdx, setSelIdx] = useState(0);
 
   const { data: contribs } = useQuery({
