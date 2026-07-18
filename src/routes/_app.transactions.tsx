@@ -111,6 +111,11 @@ function TxPage() {
               </tr>
             </thead>
             <tbody>
+              {txs.length === 0 && (
+                <tr><td colSpan={7} className="py-6 text-center text-xs text-muted-foreground">
+                  No transactions yet. <Link to="/ingest" className="text-cyan-300 hover:underline">Upload real bank data</Link> or click "Simulate suspicious transaction" above.
+                </td></tr>
+              )}
               {txs.map((t, i) => {
                 const risk = t.risk_score ?? 0;
                 return (
