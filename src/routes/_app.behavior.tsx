@@ -4,6 +4,7 @@ import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card
 import { customers } from "@/lib/mock/data";
 import { RiskBar } from "@/components/sq/risk";
 import { Search, User2, MapPin, Smartphone, Clock, TrendingUp } from "lucide-react";
+import { usePrefs, formatMoney } from "@/lib/currency";
 import { Sparkline } from "@/components/sq/sparkline";
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 
