@@ -50,7 +50,7 @@ function CorrelationPage() {
         <StatCard label="Correlation Score" value={`${composite}`} accent="text-rose-300" />
         <StatCard label="Attack Type" value={inv.attack_type ?? "—"} small />
         <StatCard label="AI Confidence" value={`${inv.confidence}%`} accent="text-cyan-300" />
-        <StatCard label="Business Impact" value={`$${Number(inv.business_impact ?? 0).toLocaleString()}`} accent="text-amber-300" />
+        <StatCard label="Business Impact" value={formatMoney(Number(inv.business_impact ?? 0), prefs)} accent="text-amber-300" />
         <StatCard label="Fraud Prob." value="94%" accent="text-violet-300" />
         <StatCard label="Cyber Prob." value="89%" accent="text-cyan-300" />
       </div>
