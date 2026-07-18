@@ -16,6 +16,7 @@ const tooltipStyle = { background: "rgba(20,25,45,0.9)", border: "1px solid rgba
 
 function BehaviorPage() {
   const [sel, setSel] = useState(customers[0]);
+  const prefs = usePrefs();
   const trend = Array.from({ length: 30 }, (_, i) => ({ d: i, risk: Math.round(20 + Math.sin(i/3)*10 + Math.random()*20 + (i > 24 ? (i-24)*8 : 0)) }));
 
   return (
