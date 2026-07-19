@@ -35,16 +35,19 @@ function verdictColor(v: string) {
 function IngestPage() {
   const ingest = useServerFn(ingestBankBatch);
   const getNarr = useServerFn(getInvestigationNarrative);
+  const regenNarr = useServerFn(regenerateInvestigationNarrative);
   const [json, setJson] = useState(SAMPLE);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<any | null>(null);
   const [narratives, setNarratives] = useState<Record<string, any>>({});
+  const [narrLoading, setNarrLoading] = useState<Record<string, boolean>>({});
+  const [narrError, setNarrError] = useState<Record<string, string>>({});
 
   async function submit() {
     let payload: any;
     try { payload = JSON.parse(json); }
     catch { toast.error("Invalid JSON — check syntax"); return; }
-    setBusy(true); setResults(null); setNarratives({});
+    setBusy(true); setResults(null); setNarratives({}); setNarrError({}); setNarrLoading({});
     try {
       const r = await ingest({ data: {
         transactions: payload.transactions ?? [],
@@ -58,12 +61,32 @@ function IngestPage() {
     } finally { setBusy(false); }
   }
 
-  async function loadNarrative(id: string) {
-    if (narratives[id]) return;
+  async function loadNarrative(id: string, opts?: { force?: boolean }) {
+    if (!opts?.force && narratives[id]) return;
+    if (narrLoading[id]) return;
+    setNarrLoading((s) => ({ ...s, [id]: true }));
+    setNarrError((s) => { const n = { ...s }; delete n[id]; return n; });
     try {
-      const n = await getNarr({ data: { investigationId: id } });
-      setNarratives((s) => ({ ...s, [id]: n?.ai_narrative || { summary: "AI narrative not yet available. Retry in a few seconds." } }));
-    } catch { toast.error("Failed to load AI explanation"); }
+      // Try existing stored narrative first
+      if (!opts?.force) {
+        const existing = await getNarr({ data: { investigationId: id } });
+        if (existing?.ai_narrative) {
+          setNarratives((s) => ({ ...s, [id]: existing.ai_narrative }));
+          return;
+        }
+      }
+      // Otherwise (or on force) request a fresh generation
+      const r = await regenNarr({ data: { investigationId: id } });
+      if (r.ok) {
+        setNarratives((s) => ({ ...s, [id]: r.narrative }));
+      } else {
+        setNarrError((s) => ({ ...s, [id]: r.reason }));
+      }
+    } catch (e: any) {
+      setNarrError((s) => ({ ...s, [id]: e?.message || "Failed to load AI explanation" }));
+    } finally {
+      setNarrLoading((s) => { const n = { ...s }; delete n[id]; return n; });
+    }
   }
 
   return (
