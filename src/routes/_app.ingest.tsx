@@ -174,9 +174,23 @@ function IngestPage() {
                 )}
                 {r.investigation_id && (
                   <div>
-                    <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => loadNarrative(r.investigation_id)}>
-                      <Sparkles className="h-3 w-3 mr-1" /> AI Explanation
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => loadNarrative(r.investigation_id)} disabled={!!narrLoading[r.investigation_id]}>
+                        {narrLoading[r.investigation_id]
+                          ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Generating…</>
+                          : <><Sparkles className="h-3 w-3 mr-1" /> AI Explanation</>}
+                      </Button>
+                      {(narratives[r.investigation_id] || narrError[r.investigation_id]) && !narrLoading[r.investigation_id] && (
+                        <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => loadNarrative(r.investigation_id, { force: true })}>
+                          Regenerate
+                        </Button>
+                      )}
+                    </div>
+                    {narrError[r.investigation_id] && !narrLoading[r.investigation_id] && (
+                      <div className="mt-2 bg-rose-500/10 border border-rose-500/30 text-rose-200 rounded p-2 text-xs">
+                        {narrError[r.investigation_id]}
+                      </div>
+                    )}
                     {narratives[r.investigation_id] && (
                       <div className="mt-2 bg-white/[0.03] border border-white/10 rounded p-3 text-xs space-y-2">
                         <div>{narratives[r.investigation_id].summary}</div>
