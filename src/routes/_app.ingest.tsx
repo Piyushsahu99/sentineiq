@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ingestBankBatch, getInvestigationNarrative } from "@/lib/ingest.functions";
+import { ingestBankBatch, getInvestigationNarrative, regenerateInvestigationNarrative } from "@/lib/ingest.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
