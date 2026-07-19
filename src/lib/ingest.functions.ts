@@ -333,3 +333,27 @@ export const getInvestigationNarrative = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return inv;
   });
+
+// Regenerate AI narrative on demand (used when the initial best-effort pass
+// during ingestion was skipped or failed).
+export const regenerateInvestigationNarrative = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ investigationId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { data: isAnalyst } = await context.supabase.rpc("is_analyst", { _user_id: context.userId });
+    if (!isAnalyst) throw new Error("Forbidden: analyst role required");
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) return { ok: false as const, reason: "AI Gateway is not configured on this deployment. Ask an admin to set LOVABLE_API_KEY." };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("currency").eq("id", context.userId).maybeSingle();
+    try {
+      await generateNarrative(supabaseAdmin, key, data.investigationId, profile?.currency || "INR");
+    } catch (e) {
+      return { ok: false as const, reason: (e as Error).message || "AI gateway request failed" };
+    }
+    const { data: inv } = await supabaseAdmin
+      .from("ai_investigations").select("id, ai_narrative, title").eq("id", data.investigationId).maybeSingle();
+    if (!inv?.ai_narrative) return { ok: false as const, reason: "AI gateway returned no usable content. Try again shortly." };
+    return { ok: true as const, narrative: inv.ai_narrative };
+  });

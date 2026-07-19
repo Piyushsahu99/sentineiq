@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ingestBankBatch, getInvestigationNarrative } from "@/lib/ingest.functions";
+import { ingestBankBatch, getInvestigationNarrative, regenerateInvestigationNarrative } from "@/lib/ingest.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,16 +35,19 @@ function verdictColor(v: string) {
 function IngestPage() {
   const ingest = useServerFn(ingestBankBatch);
   const getNarr = useServerFn(getInvestigationNarrative);
+  const regenNarr = useServerFn(regenerateInvestigationNarrative);
   const [json, setJson] = useState(SAMPLE);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<any | null>(null);
   const [narratives, setNarratives] = useState<Record<string, any>>({});
+  const [narrLoading, setNarrLoading] = useState<Record<string, boolean>>({});
+  const [narrError, setNarrError] = useState<Record<string, string>>({});
 
   async function submit() {
     let payload: any;
     try { payload = JSON.parse(json); }
     catch { toast.error("Invalid JSON — check syntax"); return; }
-    setBusy(true); setResults(null); setNarratives({});
+    setBusy(true); setResults(null); setNarratives({}); setNarrError({}); setNarrLoading({});
     try {
       const r = await ingest({ data: {
         transactions: payload.transactions ?? [],
@@ -58,12 +61,32 @@ function IngestPage() {
     } finally { setBusy(false); }
   }
 
-  async function loadNarrative(id: string) {
-    if (narratives[id]) return;
+  async function loadNarrative(id: string, opts?: { force?: boolean }) {
+    if (!opts?.force && narratives[id]) return;
+    if (narrLoading[id]) return;
+    setNarrLoading((s) => ({ ...s, [id]: true }));
+    setNarrError((s) => { const n = { ...s }; delete n[id]; return n; });
     try {
-      const n = await getNarr({ data: { investigationId: id } });
-      setNarratives((s) => ({ ...s, [id]: n?.ai_narrative || { summary: "AI narrative not yet available. Retry in a few seconds." } }));
-    } catch { toast.error("Failed to load AI explanation"); }
+      // Try existing stored narrative first
+      if (!opts?.force) {
+        const existing = await getNarr({ data: { investigationId: id } });
+        if (existing?.ai_narrative) {
+          setNarratives((s) => ({ ...s, [id]: existing.ai_narrative }));
+          return;
+        }
+      }
+      // Otherwise (or on force) request a fresh generation
+      const r = await regenNarr({ data: { investigationId: id } });
+      if (r.ok) {
+        setNarratives((s) => ({ ...s, [id]: r.narrative }));
+      } else {
+        setNarrError((s) => ({ ...s, [id]: r.reason }));
+      }
+    } catch (e: any) {
+      setNarrError((s) => ({ ...s, [id]: e?.message || "Failed to load AI explanation" }));
+    } finally {
+      setNarrLoading((s) => { const n = { ...s }; delete n[id]; return n; });
+    }
   }
 
   return (
@@ -151,9 +174,23 @@ function IngestPage() {
                 )}
                 {r.investigation_id && (
                   <div>
-                    <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => loadNarrative(r.investigation_id)}>
-                      <Sparkles className="h-3 w-3 mr-1" /> AI Explanation
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => loadNarrative(r.investigation_id)} disabled={!!narrLoading[r.investigation_id]}>
+                        {narrLoading[r.investigation_id]
+                          ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Generating…</>
+                          : <><Sparkles className="h-3 w-3 mr-1" /> AI Explanation</>}
+                      </Button>
+                      {(narratives[r.investigation_id] || narrError[r.investigation_id]) && !narrLoading[r.investigation_id] && (
+                        <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => loadNarrative(r.investigation_id, { force: true })}>
+                          Regenerate
+                        </Button>
+                      )}
+                    </div>
+                    {narrError[r.investigation_id] && !narrLoading[r.investigation_id] && (
+                      <div className="mt-2 bg-rose-500/10 border border-rose-500/30 text-rose-200 rounded p-2 text-xs">
+                        {narrError[r.investigation_id]}
+                      </div>
+                    )}
                     {narratives[r.investigation_id] && (
                       <div className="mt-2 bg-white/[0.03] border border-white/10 rounded p-3 text-xs space-y-2">
                         <div>{narratives[r.investigation_id].summary}</div>
