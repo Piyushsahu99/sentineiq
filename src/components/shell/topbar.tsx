@@ -41,48 +41,50 @@ export function Topbar({ onCommand, onCopilot, onMenu }: { onCommand: () => void
   }, [live]);
 
   return (
-    <div className="sticky top-0 z-30 h-16 border-b border-white/6 bg-background/60 backdrop-blur-xl">
+    <div className="sticky top-0 z-30 h-16 border-b border-white/6 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50">
       <div className="h-full flex items-center gap-2 sm:gap-3 px-3 sm:px-6">
         {onMenu && (
           <button
             onClick={onMenu}
             aria-label="Open navigation"
-            className="md:hidden h-9 w-9 shrink-0 grid place-items-center rounded-lg hairline hover:bg-white/6"
+            className="md:hidden h-9 w-9 shrink-0 grid place-items-center rounded-lg hairline hover:bg-white/6 active:scale-95 transition"
           >
             <Menu className="h-4 w-4" />
           </button>
         )}
         <button
           onClick={onCommand}
-          className="group flex min-w-0 items-center gap-2 rounded-lg hairline bg-white/3 hover:bg-white/6 px-3 py-1.5 text-sm text-muted-foreground w-full max-w-sm transition"
+          className="group flex min-w-0 items-center gap-2 rounded-lg hairline bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/12 px-3 py-2 text-sm text-muted-foreground w-full max-w-sm transition-all"
         >
-          <Search className="h-4 w-4 shrink-0" />
+          <Search className="h-4 w-4 shrink-0 group-hover:text-cyan-300 transition-colors" />
           <span className="flex-1 min-w-0 truncate text-left">
             <span className="hidden sm:inline">Search alerts, customers, IPs, IOCs…</span>
             <span className="sm:hidden">Search…</span>
           </span>
-          <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+          <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground/70 rounded border border-white/10 px-1.5 py-0.5 bg-white/[0.03]">
             <Command className="h-3 w-3" /> K
           </kbd>
         </button>
 
         <div className="flex-1" />
 
-        <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="hidden lg:flex items-center gap-2 text-[11px] text-muted-foreground rounded-full hairline px-2.5 py-1 bg-emerald-500/[0.04]">
           <span className="relative flex h-2 w-2">
             <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-75 animate-ping" />
             <span className="relative rounded-full h-2 w-2 bg-emerald-400" />
           </span>
-          Live · 8.9M tx/day
+          <span className="font-medium text-emerald-300/90">Live</span>
+          <span className="text-muted-foreground/70">· 8.9M tx/day</span>
         </div>
 
         <button
           onClick={onCopilot}
-          className="hidden sm:inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm hairline bg-gradient-to-r from-cyan-500/10 to-violet-500/10 hover:from-cyan-500/20 hover:to-violet-500/20 transition"
+          className="hidden sm:inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm hairline bg-gradient-to-r from-cyan-500/10 to-violet-500/10 hover:from-cyan-500/20 hover:to-violet-500/20 hover:border-cyan-400/30 transition-all"
         >
           <Sparkles className="h-4 w-4 text-cyan-300" />
-          <span>AI Copilot</span>
+          <span className="font-medium">AI Copilot</span>
         </button>
+
 
         <Popover>
           <PopoverTrigger asChild>

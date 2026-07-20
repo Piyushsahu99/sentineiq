@@ -65,10 +65,10 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
                     to={item.to}
                     onClick={onNavigate}
                     className={cn(
-                      "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] transition-all duration-200",
                       active
-                        ? "bg-white/6 text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-white/4",
+                        ? "bg-gradient-to-r from-white/8 to-white/2 text-foreground shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/4 hover:translate-x-0.5",
                       collapsed && "justify-center px-0",
                     )}
                     title={collapsed ? item.label : undefined}
@@ -76,15 +76,22 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
                     {active && (
                       <motion.span
                         layoutId="side-active"
-                        className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-gradient-to-b from-cyan-400 to-violet-500"
+                        className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full bg-gradient-to-b from-cyan-300 via-blue-400 to-violet-500 shadow-[0_0_12px_var(--cyber-blue)]"
                       />
                     )}
-                    <Icon className={cn("h-4 w-4 shrink-0", active && "text-cyan-300")} />
+                    <Icon className={cn("h-4 w-4 shrink-0 transition-colors", active ? "text-cyan-300" : "group-hover:text-foreground/80")} />
                     {!collapsed && (
                       <>
                         <span className="flex-1 truncate">{item.label}</span>
                         {"badge" in item && item.badge != null && (
-                          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white/10 text-foreground/80">
+                          <span className={cn(
+                            "text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md hairline",
+                            typeof item.badge === "number"
+                              ? "bg-rose-500/15 text-rose-300 border-rose-500/20"
+                              : item.badge === "NEW"
+                                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/20"
+                                : "bg-gradient-to-r from-cyan-500/15 to-violet-500/15 text-cyan-200"
+                          )}>
                             {item.badge}
                           </span>
                         )}
@@ -93,6 +100,7 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
                   </Link>
                 );
               })}
+
             </div>
           </div>
         ))}

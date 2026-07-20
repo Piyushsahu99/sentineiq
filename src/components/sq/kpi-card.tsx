@@ -28,26 +28,31 @@ export function KpiCard({
   const deltaUp = (delta ?? 0) >= 0;
   return (
     <GlassCard className="relative overflow-hidden group">
-      <div className={cn("absolute -top-16 -right-16 h-40 w-40 rounded-full bg-gradient-to-br opacity-40 blur-2xl transition-opacity group-hover:opacity-60", gradient)} />
-      <div className="relative flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+      <div className={cn("absolute -top-16 -right-16 h-40 w-40 rounded-full bg-gradient-to-br opacity-40 blur-2xl transition-opacity group-hover:opacity-70", gradient)} />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
             {label}
           </div>
-          <div className="mt-2 font-bold text-2xl md:text-3xl tracking-tight text-foreground font-mono">
+          <div className="mt-2 font-semibold text-2xl md:text-[28px] leading-none tracking-tight text-foreground font-mono">
             <CountUp to={value} format={format} />
             {unit && <span className="text-sm text-muted-foreground ml-1 font-sans font-normal">{unit}</span>}
           </div>
           {delta !== undefined && (
-            <div className={cn("mt-2 text-[11px] font-medium inline-flex items-center gap-1", deltaUp ? "text-emerald-400" : "text-rose-400")}>
-              <span>{deltaUp ? "▲" : "▼"}</span>
-              <span>{Math.abs(delta)}%</span>
-              <span className="text-muted-foreground font-normal">vs 7d</span>
+            <div className={cn(
+              "mt-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium hairline",
+              deltaUp
+                ? "text-emerald-300 bg-emerald-500/10 border-emerald-500/20"
+                : "text-rose-300 bg-rose-500/10 border-rose-500/20",
+            )}>
+              <span className="text-[9px]">{deltaUp ? "▲" : "▼"}</span>
+              <span className="font-mono">{Math.abs(delta)}%</span>
+              <span className="text-muted-foreground/80 font-normal ml-0.5">7d</span>
             </div>
           )}
         </div>
         {icon && (
-          <div className="h-10 w-10 rounded-xl grid place-items-center hairline" style={{ color: accent, background: `color-mix(in oklab, ${accent} 12%, transparent)` }}>
+          <div className="h-10 w-10 rounded-xl grid place-items-center hairline shrink-0" style={{ color: accent, background: `color-mix(in oklab, ${accent} 14%, transparent)` }}>
             {icon}
           </div>
         )}
@@ -55,3 +60,4 @@ export function KpiCard({
     </GlassCard>
   );
 }
+
