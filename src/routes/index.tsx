@@ -111,16 +111,16 @@ function Landing() {
             <a href="#modules" className="text-xs px-4 py-2.5 rounded-lg hairline hover:bg-white/6 text-muted-foreground hover:text-foreground">Explore modules</a>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl">
+          <div className="mt-8 sm:mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-3xl">
             {[
-              { k: "$4.2B", v: "Fraud prevented (YTD)" },
-              { k: "18M+", v: "Signals/day correlated" },
+              { k: "₹2,400 Cr", v: "Fraud prevented (YTD)" },
+              { k: "2.4M", v: "Signals/day correlated" },
               { k: "94ms", v: "Median decision latency" },
-              { k: "38", v: "Global bank tenants" },
+              { k: "12", v: "Global bank tenants" },
             ].map((s) => (
-              <div key={s.v} className="rounded-xl hairline glass px-4 py-3">
-                <div className="text-lg font-bold text-gradient-cyber font-mono">{s.k}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{s.v}</div>
+              <div key={s.v} className="rounded-xl hairline glass px-3 sm:px-4 py-3">
+                <div className="text-base sm:text-lg font-bold text-gradient-cyber font-mono">{s.k}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5 leading-tight">{s.v}</div>
               </div>
             ))}
           </div>
@@ -140,9 +140,9 @@ function Landing() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { icon: Activity, label: "Alerts (24h)", value: "1,284", trend: "+12%", color: "text-cyan-300" },
-                { icon: DollarSign, label: "Blocked wires", value: "$18.4M", trend: "+3.2%", color: "text-emerald-300" },
-                { icon: Brain, label: "AI investigations", value: "312", trend: "+41%", color: "text-violet-300" },
+                { icon: Activity, label: "Alerts (24h)", value: "128", trend: "+12%", color: "text-cyan-300" },
+                { icon: DollarSign, label: "Blocked wires", value: "₹18.4 Cr", trend: "+3.2%", color: "text-emerald-300" },
+                { icon: Brain, label: "AI investigations", value: "42", trend: "+9%", color: "text-violet-300" },
                 { icon: Atom, label: "PQ-ready assets", value: "63%", trend: "+8%", color: "text-fuchsia-300" },
               ].map((k) => (
                 <div key={k.label} className="rounded-lg hairline bg-white/3 p-3">
@@ -150,8 +150,8 @@ function Landing() {
                     <k.icon className={`h-4 w-4 ${k.color}`} />
                     <span className="text-[9px] text-emerald-400 font-mono">{k.trend}</span>
                   </div>
-                  <div className="mt-2 text-xl font-bold font-mono">{k.value}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k.label}</div>
+                  <div className="mt-2 text-lg sm:text-xl font-bold font-mono truncate">{k.value}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-tight">{k.label}</div>
                 </div>
               ))}
             </div>
