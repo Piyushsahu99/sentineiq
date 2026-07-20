@@ -66,7 +66,17 @@ function LoginPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
         if (error) throw error;
       }
-      nav({ to: "/auth/mfa" });
+      // Only route through MFA when Supabase reports an MFA factor is required.
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+        nav({ to: "/auth/mfa" });
+      } else {
+        const { data: u } = await supabase.auth.getUser();
+        const { data: r } = u.user
+          ? await supabase.from("user_roles").select("role").eq("user_id", u.user.id).limit(1).maybeSingle()
+          : { data: null };
+        nav({ to: r?.role ? "/dashboard" : "/auth/role-select" });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed";
       setErrors({ form: msg });
