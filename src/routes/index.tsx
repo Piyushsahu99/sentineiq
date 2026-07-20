@@ -111,16 +111,16 @@ function Landing() {
             <a href="#modules" className="text-xs px-4 py-2.5 rounded-lg hairline hover:bg-white/6 text-muted-foreground hover:text-foreground">Explore modules</a>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl">
+          <div className="mt-8 sm:mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-3xl">
             {[
-              { k: "$4.2B", v: "Fraud prevented (YTD)" },
-              { k: "18M+", v: "Signals/day correlated" },
+              { k: "₹2,400 Cr", v: "Fraud prevented (YTD)" },
+              { k: "2.4M", v: "Signals/day correlated" },
               { k: "94ms", v: "Median decision latency" },
-              { k: "38", v: "Global bank tenants" },
+              { k: "12", v: "Global bank tenants" },
             ].map((s) => (
-              <div key={s.v} className="rounded-xl hairline glass px-4 py-3">
-                <div className="text-lg font-bold text-gradient-cyber font-mono">{s.k}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{s.v}</div>
+              <div key={s.v} className="rounded-xl hairline glass px-3 sm:px-4 py-3">
+                <div className="text-base sm:text-lg font-bold text-gradient-cyber font-mono">{s.k}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5 leading-tight">{s.v}</div>
               </div>
             ))}
           </div>
