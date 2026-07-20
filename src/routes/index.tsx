@@ -140,9 +140,9 @@ function Landing() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { icon: Activity, label: "Alerts (24h)", value: "1,284", trend: "+12%", color: "text-cyan-300" },
-                { icon: DollarSign, label: "Blocked wires", value: "$18.4M", trend: "+3.2%", color: "text-emerald-300" },
-                { icon: Brain, label: "AI investigations", value: "312", trend: "+41%", color: "text-violet-300" },
+                { icon: Activity, label: "Alerts (24h)", value: "128", trend: "+12%", color: "text-cyan-300" },
+                { icon: DollarSign, label: "Blocked wires", value: "₹18.4 Cr", trend: "+3.2%", color: "text-emerald-300" },
+                { icon: Brain, label: "AI investigations", value: "42", trend: "+9%", color: "text-violet-300" },
                 { icon: Atom, label: "PQ-ready assets", value: "63%", trend: "+8%", color: "text-fuchsia-300" },
               ].map((k) => (
                 <div key={k.label} className="rounded-lg hairline bg-white/3 p-3">
@@ -150,8 +150,8 @@ function Landing() {
                     <k.icon className={`h-4 w-4 ${k.color}`} />
                     <span className="text-[9px] text-emerald-400 font-mono">{k.trend}</span>
                   </div>
-                  <div className="mt-2 text-xl font-bold font-mono">{k.value}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k.label}</div>
+                  <div className="mt-2 text-lg sm:text-xl font-bold font-mono truncate">{k.value}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-tight">{k.label}</div>
                 </div>
               ))}
             </div>
