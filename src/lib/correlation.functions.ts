@@ -133,7 +133,7 @@ export const submitFeedback = createServerFn({ method: "POST" })
       signal_id: data.signalId ?? null,
       verdict: data.verdict,
       notes: data.notes ?? null,
-      analyst_id: context.userId,
+      user_id: context.userId,
     });
 
     // Auto-suppression: 3 false-positives on same signal → suppress 7d
