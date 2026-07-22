@@ -104,3 +104,53 @@ export const runProactiveScan = createServerFn({ method: "POST" })
 
     return { created: 1, investigation_id: inv?.id, critical: critical.length };
   });
+
+
+// ---------- Analyst feedback (false-positive loop) ----------
+const FeedbackInput = z.object({
+  investigationId: z.string().uuid().optional(),
+  signalId: z.string().max(120).optional(),
+  verdict: z.enum(["true_positive", "false_positive", "benign"]),
+  notes: z.string().max(500).optional(),
+});
+
+export const submitFeedback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => FeedbackInput.parse(raw))
+  .handler(async ({ data, context }) => {
+    const { data: isAnalyst } = await context.supabase.rpc("is_analyst", { _user_id: context.userId });
+    if (!isAnalyst) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    let customerId: string | null = null;
+    if (data.investigationId) {
+      const { data: inv } = await supabaseAdmin.from("ai_investigations").select("customer_id").eq("id", data.investigationId).maybeSingle();
+      customerId = inv?.customer_id ?? null;
+    }
+
+    await supabaseAdmin.from("analyst_feedback").insert({
+      investigation_id: data.investigationId ?? null,
+      signal_id: data.signalId ?? null,
+      verdict: data.verdict,
+      notes: data.notes ?? null,
+      analyst_id: context.userId,
+    });
+
+    // Auto-suppression: 3 false-positives on same signal → suppress 7d
+    if (data.verdict === "false_positive" && data.signalId) {
+      const { data: fps } = await supabaseAdmin
+        .from("analyst_feedback").select("id")
+        .eq("signal_id", data.signalId).eq("verdict", "false_positive");
+      if ((fps?.length ?? 0) >= 3) {
+        await supabaseAdmin.from("suppressions").upsert({
+          signal_id: data.signalId,
+          customer_id: customerId,
+          weight_multiplier: 0.3,
+          expires_at: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
+          created_by: context.userId,
+        }, { onConflict: "signal_id,customer_id" });
+      }
+    }
+
+    return { ok: true };
+  });
