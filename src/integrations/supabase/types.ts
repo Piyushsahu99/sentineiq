@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           ai_narrative: Json | null
           attack_type: string | null
+          band: string | null
           business_impact: number | null
           calibrated_confidence: number | null
           compliance: Json | null
@@ -28,15 +29,18 @@ export type Database = {
           explanation: Json | null
           id: string
           recommended_actions: Json | null
+          risk_breakdown: Json | null
           risk_factors: Json | null
           root_cause: string | null
           status: string
+          timeline: Json | null
           title: string
           transaction_id: string | null
         }
         Insert: {
           ai_narrative?: Json | null
           attack_type?: string | null
+          band?: string | null
           business_impact?: number | null
           calibrated_confidence?: number | null
           compliance?: Json | null
@@ -47,15 +51,18 @@ export type Database = {
           explanation?: Json | null
           id?: string
           recommended_actions?: Json | null
+          risk_breakdown?: Json | null
           risk_factors?: Json | null
           root_cause?: string | null
           status?: string
+          timeline?: Json | null
           title: string
           transaction_id?: string | null
         }
         Update: {
           ai_narrative?: Json | null
           attack_type?: string | null
+          band?: string | null
           business_impact?: number | null
           calibrated_confidence?: number | null
           compliance?: Json | null
@@ -66,9 +73,11 @@ export type Database = {
           explanation?: Json | null
           id?: string
           recommended_actions?: Json | null
+          risk_breakdown?: Json | null
           risk_factors?: Json | null
           root_cause?: string | null
           status?: string
+          timeline?: Json | null
           title?: string
           transaction_id?: string | null
         }

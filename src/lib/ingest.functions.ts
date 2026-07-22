@@ -1,7 +1,7 @@
 // Bank data ingestion + AI narrative
 // Accepts raw bank JSON (transactions + cyber events), persists them,
-// runs the correlation engine per tx, and generates a plain-English AI
-// explanation via the Lovable AI Gateway.
+// runs the shared correlation engine per tx (correlation-core.server), and
+// generates a plain-English AI explanation via the Lovable AI Gateway.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -10,12 +10,13 @@ const TxIn = z.object({
   txn_id: z.string().min(1).max(64).optional(),
   user_id: z.string().min(1).max(64),
   amount: z.number().finite(),
-  merchant: z.string().max(120).optional().default(""),
-  location: z.string().max(64).optional().default(""),
+  merchant: z.string().max(120).optional(),
+  location: z.string().max(64).optional(),
   country: z.string().max(4).optional(),
-  device: z.string().max(80).optional().default(""),
-  channel: z.string().max(24).optional().default("card"),
+  device: z.string().max(80).optional(),
+  channel: z.string().max(24).optional(),
   currency: z.string().min(3).max(4).optional(),
+  ts: z.string().optional(),
 });
 const EventIn = z.object({
   user: z.string().min(1).max(64),
@@ -29,7 +30,6 @@ const Input = z.object({
   cyberEvents: z.array(EventIn).max(500).default([]),
 });
 
-// Very small country-of-city heuristic; falls back to profile.region.
 const CITY_TO_COUNTRY: Record<string, string> = {
   mumbai: "IN", delhi: "IN", bangalore: "IN", bengaluru: "IN", chennai: "IN", pune: "IN",
   london: "GB", manchester: "GB", "new york": "US", "san francisco": "US", chicago: "US",
@@ -38,9 +38,9 @@ const CITY_TO_COUNTRY: Record<string, string> = {
 
 function severityFor(event: string): "info" | "medium" | "high" | "critical" {
   const s = event.toLowerCase();
-  if (/malware|beacon|c2|ransomware|infostealer/.test(s)) return "critical";
-  if (/impossible travel|vpn|tor|mfa fail|credential stuff|brute/.test(s)) return "high";
-  if (/login|auth|new device/.test(s)) return "medium";
+  if (/malware|beacon|c2|ransomware|infostealer|sim.?swap/.test(s)) return "critical";
+  if (/impossible travel|tor|mfa fatigue|credential stuff|brute|phish/.test(s)) return "high";
+  if (/vpn|login|auth|new device/.test(s)) return "medium";
   return "info";
 }
 
@@ -51,13 +51,14 @@ export const ingestBankBatch = createServerFn({ method: "POST" })
     const { data: isAnalyst } = await context.supabase.rpc("is_analyst", { _user_id: context.userId });
     if (!isAnalyst) throw new Error("Forbidden: analyst role required to ingest bank data");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { scoreAndPersist } = await import("@/lib/correlation-core.server");
 
     const { data: profile } = await supabaseAdmin
       .from("profiles").select("region, currency").eq("id", context.userId).maybeSingle();
     const defaultCurrency = profile?.currency || "INR";
     const defaultCountry = profile?.region || "IN";
 
-    // ---------- 1. Upsert customers by bank user_id (stored in email column) ----------
+    // ---------- 1. Upsert customers by bank user_id ----------
     const userIds = Array.from(new Set([
       ...data.transactions.map((t) => t.user_id),
       ...data.cyberEvents.map((e) => e.user),
@@ -104,6 +105,7 @@ export const ingestBankBatch = createServerFn({ method: "POST" })
         merchant: t.merchant || null,
         country,
         status: "pending",
+        created_at: t.ts ?? new Date().toISOString(),
       };
     });
     let insertedTx: Array<{ id: string; created_at: string }> = [];
@@ -114,39 +116,40 @@ export const ingestBankBatch = createServerFn({ method: "POST" })
       insertedTx = inserted ?? [];
     }
 
-    // ---------- 4. Run correlation per tx ----------
-    const { correlateTransaction } = await import("@/lib/correlation.functions");
+    // ---------- 4. Score every tx through the shared engine ----------
     const results: Array<{
-      txn_id: string; db_id: string; composite: number; verdict: string;
+      txn_id: string; db_id: string; composite: number; verdict: string; band: string;
       dominant_kind: string; top_signals: string[]; investigation_id: string | null;
+      risk_breakdown: any; timeline: any; escalations: any;
     }> = [];
     for (let i = 0; i < insertedTx.length; i++) {
       const dbId = insertedTx[i].id;
       const src = data.transactions[i];
       try {
-        // Call the inner handler by re-invoking the exported server fn on the server side
-        // via its handler is not exposed; instead re-issue the correlate call through admin.
-        // Simplest: replicate a compact scoring path — but we already have the full engine.
-        // Server fns aren't callable server-side directly; run a fetch to ourselves is heavy.
-        // Instead: import the RAW handler by calling correlation logic through supabaseAdmin here.
-        void correlateTransaction; // keep tree-shaker happy
-        const r = await runCorrelationInline(supabaseAdmin, dbId);
-        const inv = r.composite >= 60 ? await supabaseAdmin
-          .from("ai_investigations").select("id").eq("transaction_id", dbId).maybeSingle() : null;
+        const r = await scoreAndPersist(supabaseAdmin, dbId);
         results.push({
           txn_id: src.txn_id || dbId.slice(0, 8),
           db_id: dbId,
           composite: r.composite,
-          verdict: r.composite >= 80 ? "blocked" : r.composite >= 60 ? "pending" : "approved",
+          verdict: r.status,
+          band: r.band,
           dominant_kind: r.dominant_kind,
-          top_signals: r.contributors.slice(0, 3).map((s: any) => s.name),
-          investigation_id: inv?.data?.id ?? null,
+          top_signals: r.signals
+            .slice()
+            .sort((a, b) => b.weight - a.weight)
+            .slice(0, 3)
+            .map((s) => s.name),
+          investigation_id: r.investigation_id,
+          risk_breakdown: r.risk_breakdown,
+          timeline: r.timeline,
+          escalations: r.escalations,
         });
       } catch (err) {
         results.push({
           txn_id: src.txn_id || dbId.slice(0, 8), db_id: dbId, composite: 0,
-          verdict: "error", dominant_kind: "n/a",
+          verdict: "error", band: "Approved", dominant_kind: "n/a",
           top_signals: [(err as Error).message], investigation_id: null,
+          risk_breakdown: [], timeline: [], escalations: [],
         });
       }
     }
@@ -170,139 +173,23 @@ export const ingestBankBatch = createServerFn({ method: "POST" })
     };
   });
 
-// Inline runner mirroring correlateTransaction so we can call it in a loop
-// without going through the RPC layer (server fns aren't callable server-side).
-async function runCorrelationInline(supabaseAdmin: any, txId: string) {
-  const [helpers] = await importInline();
-  const { loadCtx, rules, applyS } = helpers;
-  const { data: tx } = await supabaseAdmin.from("transactions").select("*").eq("id", txId).maybeSingle();
-  if (!tx) throw new Error("tx not found post-insert");
-  const ctx = await loadCtx(supabaseAdmin, tx);
-  const raw = rules(tx, ctx);
-  const { adjusted: signals, suppressed } = await applyS(supabaseAdmin, raw, tx.customer_id);
-  const baseline = ctx.cust?.risk_baseline ?? 20;
-  const composite = Math.min(99, signals.reduce((s: number, x: any) => s + x.weight, 0) + Math.round(baseline / 5));
-  const kindWeights = signals.reduce((acc: any, s: any) => { acc[s.kind] = (acc[s.kind] ?? 0) + s.weight; return acc; }, { fraud: 0, cyber: 0, xcorr: 0, quantum: 0 });
-  const dominant = (Object.entries(kindWeights).sort((a: any, b: any) => b[1] - a[1])[0]?.[0]) as string ?? "fraud";
-  const avgConf = signals.length ? Math.round(signals.reduce((s: number, x: any) => s + x.confidence, 0) / signals.length) : 50;
-  const calibrated = Math.round(avgConf * 0.6 + composite * 0.4);
-  const explanation = { signals, composite, calibrated_confidence: calibrated, kind_weights: kindWeights, dominant_kind: dominant, suppressed };
-
-  await supabaseAdmin.from("risk_scores").insert({
-    transaction_id: tx.id, customer_id: tx.customer_id, composite,
-    contributors: signals.map((s: any) => ({ name: s.name, weight: s.weight, kind: s.kind, id: s.id })),
-  });
-  await supabaseAdmin.from("transactions").update({
-    risk_score: composite,
-    status: composite >= 80 ? "blocked" : composite >= 60 ? "pending" : "approved",
-  }).eq("id", tx.id);
-
-  if (composite >= 60) {
-    const severity = composite >= 85 ? "critical" : composite >= 70 ? "high" : "medium";
-    const { data: inv } = await supabaseAdmin.from("ai_investigations").insert({
-      transaction_id: tx.id, customer_id: tx.customer_id,
-      title: `Risk ${composite} · ${dominant.toUpperCase()} · ${tx.channel} → ${tx.country ?? "?"}`,
-      confidence: Math.min(99, composite + 3),
-      calibrated_confidence: calibrated,
-      attack_type: dominant === "quantum" ? "Post-quantum exposure"
-        : dominant === "cyber" ? "Cyber-led compromise"
-        : dominant === "xcorr" ? "Correlated cyber + fraud attack chain"
-        : "Anomalous transaction",
-      business_impact: Number(tx.amount),
-      root_cause: `Composite ${composite} from ${signals.length} typed signals (${dominant} dominant). Suppressed: ${suppressed.length}.`,
-      evidence: signals.map((s: any) => ({ ts: s.evidence[0]?.ts ?? new Date().toISOString(), source: s.evidence[0]?.source ?? s.kind, event: s.name, weight: s.weight, signal_id: s.id })),
-      explanation, risk_factors: signals.map((s: any) => s.name),
-      recommended_actions: composite >= 85
-        ? ["Freeze account for 24h", "Force credential reset", "Notify customer via secondary channel", "File SAR"]
-        : ["Manual analyst review", "Enrich with device history", "Contact customer for confirmation"],
-      compliance: composite >= 85 ? ["PSD2 SCA review", "AML SAR filing", "DORA incident report"] : ["Manual review"],
-      status: "open",
-    }).select("id").single();
-    await supabaseAdmin.from("alerts").insert({
-      transaction_id: tx.id, customer_id: tx.customer_id, investigation_id: inv?.id,
-      severity, title: `Ingest · risk ${composite} on ${tx.channel} ${tx.currency} ${tx.amount}`,
-      source: "bank-ingest", status: "open",
-      sla_minutes: severity === "critical" ? 15 : 60,
-    });
-  }
-  return { composite, dominant_kind: dominant, contributors: signals };
-}
-
-// Grab the (non-exported) helper closures from correlation.functions by re-importing
-// its named exports and reusing the same context. We recreate mini versions here to
-// avoid coupling; kept identical to the engine's semantics.
-async function importInline() {
-  const HIGH_RISK_GEO = ["RU", "NG", "AE", "IR", "CN", "VN"];
-  return [{
-    loadCtx: async (adm: any, tx: any) => {
-      const [{ data: cust }, { data: telem }, { data: iocs }, { data: sessions }, { data: devices }, { data: recentTx }, { data: quantum }] = await Promise.all([
-        adm.from("customers").select("*").eq("id", tx.customer_id).maybeSingle(),
-        adm.from("cyber_telemetry").select("*").order("created_at", { ascending: false }).limit(50),
-        adm.from("iocs").select("*").limit(20),
-        adm.from("sessions").select("*").eq("customer_id", tx.customer_id).order("started_at", { ascending: false }).limit(10),
-        adm.from("devices").select("*").eq("customer_id", tx.customer_id).limit(10),
-        adm.from("transactions").select("id, amount, country, channel, currency, created_at").eq("customer_id", tx.customer_id).order("created_at", { ascending: false }).limit(30),
-        adm.from("quantum_assets").select("*"),
-      ]);
-      return { cust, telem: telem ?? [], iocs: iocs ?? [], sessions: sessions ?? [], devices: devices ?? [], recentTx: recentTx ?? [], quantum: quantum ?? [] };
-    },
-    rules: (tx: any, ctx: any) => {
-      const signals: any[] = [];
-      const amt = Number(tx.amount);
-      const baseline = ctx.cust?.risk_baseline ?? 20;
-      const amounts = ctx.recentTx.map((t: any) => Number(t.amount)).filter((n: number) => Number.isFinite(n));
-      const mean = amounts.length ? amounts.reduce((a: number, b: number) => a + b, 0) / amounts.length : amt;
-      const std = amounts.length > 1 ? Math.sqrt(amounts.reduce((s: number, v: number) => s + (v - mean) ** 2, 0) / amounts.length) : 0;
-      const z = std > 0 ? (amt - mean) / std : 0;
-      if (z > 2) signals.push({ id: "fraud.amount_zscore", kind: "fraud", name: `Amount ${z.toFixed(1)}σ above customer baseline`, weight: Math.min(20, Math.round(z * 4)), confidence: 80, evidence: [{ source: "transactions", note: `mean ${mean.toFixed(0)}, tx ${amt}` }] });
-      // Large amount heuristic — bank ingest often has no prior history
-      if (amt >= 100000) signals.push({ id: "fraud.large_amount", kind: "fraud", name: `Large amount (${tx.currency} ${amt.toLocaleString()})`, weight: 14, confidence: 78, evidence: [{ source: "transactions", note: `single tx ${tx.currency} ${amt}` }] });
-      if (tx.country && ctx.cust?.country && tx.country !== ctx.cust.country) {
-        const w = HIGH_RISK_GEO.includes(tx.country) ? 15 : 6;
-        signals.push({ id: "fraud.geo_drift", kind: "fraud", name: `Geo drift: ${ctx.cust.country} → ${tx.country}`, weight: w, confidence: 75, evidence: [{ source: "customers", note: `home ${ctx.cust.country}, tx ${tx.country}` }] });
-      }
-      const critical = ctx.telem.filter((t: any) => t.severity === "critical");
-      const high = ctx.telem.filter((t: any) => t.severity === "high");
-      // Cyber events tied to this customer via metadata
-      const mineHigh = ctx.telem.filter((t: any) => t.metadata?.customer_id === tx.customer_id && (t.severity === "high" || t.severity === "critical"));
-      if (mineHigh.length) {
-        signals.push({ id: "cyber.customer_events", kind: "cyber", name: `${mineHigh.length} high/critical cyber event(s) on this customer`, weight: 10 + mineHigh.length * 2, confidence: 88, evidence: mineHigh.slice(0, 4).map((t: any) => ({ source: t.source, ref_id: t.id, ts: t.created_at, note: t.message })) });
-      }
-      if (critical.length && !mineHigh.length) signals.push({ id: "cyber.critical_telemetry", kind: "cyber", name: `${critical.length} critical telemetry events (tenant)`, weight: Math.min(14, 4 + critical.length), confidence: 80, evidence: critical.slice(0, 3).map((t: any) => ({ source: t.source, ref_id: t.id, ts: t.created_at, note: t.message })) });
-      if (high.length >= 3 && !mineHigh.length) signals.push({ id: "cyber.high_volume", kind: "cyber", name: `${high.length} high-severity events`, weight: 8, confidence: 70, evidence: high.slice(0, 3).map((t: any) => ({ source: t.source, ref_id: t.id, ts: t.created_at, note: t.message })) });
-      // xcorr: cyber event on this customer just before tx
-      const txTs = new Date(tx.created_at).getTime();
-      const precedes = mineHigh.find((t: any) => { const dt = txTs - new Date(t.created_at).getTime(); return dt >= -60_000 && dt < 30 * 60_000; });
-      if (precedes) signals.push({ id: "xcorr.cyber_precedes_tx", kind: "xcorr", name: "Cyber event within 30 min of transaction", weight: 18, confidence: 91, evidence: [{ source: precedes.source, ref_id: precedes.id, ts: precedes.created_at, note: precedes.message }] });
-      // Quantum
-      const legacy = ctx.quantum.filter((q: any) => /^RSA-|3DES/i.test(q.algo ?? "") && (q.sensitivity ?? 0) >= 70);
-      if (legacy.length && amt >= 5000) signals.push({ id: "quantum.hndl_exposure", kind: "quantum", name: `HNDL exposure on ${legacy.length} legacy asset(s)`, weight: 8, confidence: 65, evidence: legacy.slice(0, 3).map((q: any) => ({ source: "quantum_assets", ref_id: q.id, note: `${q.asset} · ${q.algo}` })) });
-      if (baseline > 40) signals.push({ id: "fraud.customer_baseline", kind: "fraud", name: `Customer risk baseline ${baseline}`, weight: Math.round(baseline / 8), confidence: 55, evidence: [{ source: "customers", note: `baseline ${baseline}` }] });
-      return signals;
-    },
-    applyS: async (adm: any, signals: any[], customerId: string) => {
-      const { data: sups } = await adm.from("suppressions").select("signal_id, weight_multiplier, expires_at, customer_id").gt("expires_at", new Date().toISOString());
-      const active = (sups ?? []).filter((s: any) => !s.customer_id || s.customer_id === customerId);
-      const suppressed: string[] = [];
-      const adjusted = signals.map((sig: any) => {
-        const s = active.find((a: any) => a.signal_id === sig.id);
-        if (!s) return sig;
-        suppressed.push(sig.id);
-        return { ...sig, weight: Math.round(sig.weight * Number(s.weight_multiplier)) };
-      });
-      return { adjusted, suppressed };
-    },
-  }];
-}
-
 async function generateNarrative(adm: any, key: string, investigationId: string, currency: string) {
   const { data: inv } = await adm.from("ai_investigations").select("*").eq("id", investigationId).maybeSingle();
   if (!inv) return;
   const body = {
     model: "google/gemini-2.5-flash",
     messages: [
-      { role: "system", content: `You are SentinelQ's explainable-AI analyst. Given a fraud/cyber investigation, produce concise plain-English output (<= 180 words). Use the provided currency ${currency} in amounts. Return STRICT JSON with keys: summary (string, 2-3 sentences), why_flagged (array of 3-5 short bullets), recommended_actions (array of 3-5 short bullets), confidence_rationale (1 sentence).` },
-      { role: "user", content: JSON.stringify({ title: inv.title, attack_type: inv.attack_type, business_impact: inv.business_impact, risk_factors: inv.risk_factors, explanation: inv.explanation }) },
+      { role: "system", content:
+        `You are SentinelQ's explainable-AI analyst producing bank-grade investigation write-ups (JPMorgan / Visa / Mastercard style). ` +
+        `Return STRICT JSON with keys: summary (2-3 sentences, plain English), why_flagged (3-5 short bullets citing the specific signals and combo escalations), ` +
+        `recommended_actions (3-5 concrete bullets aligned to the risk band), confidence_rationale (1 sentence). ` +
+        `Use ${currency} for all amounts. Keep the total under 220 words.` },
+      { role: "user", content: JSON.stringify({
+        title: inv.title, band: inv.band, attack_type: inv.attack_type,
+        business_impact: inv.business_impact, risk_factors: inv.risk_factors,
+        risk_breakdown: inv.risk_breakdown, timeline: inv.timeline,
+        explanation: inv.explanation,
+      }) },
     ],
     temperature: 0.3,
     response_format: { type: "json_object" },
@@ -322,7 +209,6 @@ async function generateNarrative(adm: any, key: string, investigationId: string,
   } catch { /* ignore */ }
 }
 
-// Fetch stored AI narrative for an investigation
 export const getInvestigationNarrative = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => z.object({ investigationId: z.string().uuid() }).parse(raw))
@@ -334,8 +220,6 @@ export const getInvestigationNarrative = createServerFn({ method: "GET" })
     return inv;
   });
 
-// Regenerate AI narrative on demand (used when the initial best-effort pass
-// during ingestion was skipped or failed).
 export const regenerateInvestigationNarrative = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => z.object({ investigationId: z.string().uuid() }).parse(raw))
@@ -356,4 +240,168 @@ export const regenerateInvestigationNarrative = createServerFn({ method: "POST" 
       .from("ai_investigations").select("id, ai_narrative, title").eq("id", data.investigationId).maybeSingle();
     if (!inv?.ai_narrative) return { ok: false as const, reason: "AI gateway returned no usable content. Try again shortly." };
     return { ok: true as const, narrative: inv.ai_narrative };
+  });
+
+// ---------- Categorized demo datasets ----------
+// Presets used by the /ingest "Demo Datasets" tab. Each preset feeds
+// ingestBankBatch and reports actual vs expected band for validation.
+export type DemoPreset = {
+  category: string;
+  label: string;
+  description: string;
+  transactions: z.infer<typeof TxIn>[];
+  cyberEvents: z.infer<typeof EventIn>[];
+  expected: { band: string; composite_min: number; decision: string; explanation: string };
+};
+
+function uid(prefix: string) { return `${prefix}${Math.floor(Math.random() * 900 + 100)}`; }
+const now = () => new Date().toISOString();
+const past = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+
+export function buildDemoPresets(currency = "INR"): DemoPreset[] {
+  const large = currency === "USD" ? 25000 : currency === "EUR" ? 23000 : 500000;
+  const mid = currency === "USD" ? 800 : currency === "EUR" ? 750 : 60000;
+  const small = currency === "USD" ? 45 : currency === "EUR" ? 40 : 3500;
+
+  const u = (n: number) => `DEMO-U${String(n).padStart(3, "0")}`;
+
+  return [
+    { category: "normal", label: "✅ Normal Customer", description: "Routine domestic card purchase, trusted device.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(1), amount: small, merchant: "Grocery", location: "Mumbai", device: "iPhone", channel: "card", currency }],
+      cyberEvents: [{ user: u(1), event: "Routine authentication event", device: "iPhone", ip: "203.0.113.10" }],
+      expected: { band: "Approved", composite_min: 0, decision: "approved", explanation: "No risk signals fire." } },
+
+    { category: "low_risk", label: "🟡 Low Risk", description: "Higher-than-usual amount but same country + trusted device.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(2), amount: mid, merchant: "Electronics", location: "Delhi", device: "Android", channel: "card", currency }],
+      cyberEvents: [{ user: u(2), event: "GeoIP mismatch on login", device: "Android", ip: "203.0.113.20" }],
+      expected: { band: "Monitor", composite_min: 30, decision: "approved", explanation: "One medium signal, no combo." } },
+
+    { category: "medium_risk", label: "🟠 Medium Risk", description: "New device + higher amount.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(3), amount: mid * 3, merchant: "Jewellery", location: "Mumbai", device: "New-Android", channel: "card", currency }],
+      cyberEvents: [{ user: u(3), event: "New device registered for MFA", device: "New-Android", ip: "203.0.113.30" }],
+      expected: { band: "Pending Review", composite_min: 50, decision: "pending", explanation: "New device + elevated amount." } },
+
+    { category: "high_risk", label: "🔴 High Risk", description: "Wire abroad + VPN + new device.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(4), amount: large, merchant: "Foreign beneficiary", location: "Dubai", device: "Android", channel: "wire", currency, country: "AE" }],
+      cyberEvents: [
+        { user: u(4), event: "VPN Login", ip: "185.220.101.50", device: "Android", ts: past(10) },
+        { user: u(4), event: "New device registered for MFA", device: "Android", ts: past(8) },
+      ],
+      expected: { band: "High Risk", composite_min: 70, decision: "pending", explanation: "Cyber + wire + high-risk geo." } },
+
+    { category: "critical_fraud", label: "⛔ Critical Fraud", description: "Full kill chain: malware → wire abroad.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(5), amount: large * 2, merchant: "Unknown beneficiary", location: "Moscow", device: "Windows", channel: "wire", currency, country: "RU" }],
+      cyberEvents: [
+        { user: u(5), event: "RedLine infostealer executed on endpoint", device: "Windows", ts: past(20) },
+        { user: u(5), event: "Impossible travel: London → Amsterdam in 4 min", ts: past(5) },
+      ],
+      expected: { band: "Block", composite_min: 85, decision: "blocked", explanation: "Malware forces block + xcorr chain." } },
+
+    { category: "international", label: "🌍 International Transactions", description: "Cross-border wire, no cyber signals.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(6), amount: mid * 5, merchant: "Overseas vendor", location: "Singapore", device: "iPhone", channel: "wire", currency, country: "SG" }],
+      cyberEvents: [],
+      expected: { band: "Pending Review", composite_min: 40, decision: "pending", explanation: "Geo drift + wire large amount." } },
+
+    { category: "card_fraud", label: "💳 Card Fraud", description: "Card-not-present enumeration burst.",
+      transactions: [
+        { txn_id: uid("TXN"), user_id: u(7), amount: small * 3, merchant: "Test1", location: "Chicago", channel: "card", currency, ts: past(9) },
+        { txn_id: uid("TXN"), user_id: u(7), amount: small * 4, merchant: "Test2", location: "Chicago", channel: "card", currency, ts: past(6) },
+        { txn_id: uid("TXN"), user_id: u(7), amount: small * 5, merchant: "Test3", location: "Chicago", channel: "card", currency, ts: past(3) },
+      ],
+      cyberEvents: [{ user: u(7), event: "Bot / automated client signature", ip: "5.5.5.5" }],
+      expected: { band: "High Risk", composite_min: 65, decision: "pending", explanation: "Rapid velocity + bot signature." } },
+
+    { category: "wire_fraud", label: "🏦 Wire Transfer Fraud", description: "Large wire to untrusted beneficiary.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(8), amount: large, merchant: "New beneficiary", location: "Lagos", device: "Windows", channel: "wire", currency, country: "NG" }],
+      cyberEvents: [{ user: u(8), event: "OAuth consent to unverified 3rd-party app" }],
+      expected: { band: "High Risk", composite_min: 70, decision: "pending", explanation: "Wire + high-risk geo + large." } },
+
+    { category: "sim_swap", label: "📱 SIM Swap", description: "SIM swap → immediate wire out.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(9), amount: large, merchant: "Foreign wire", location: "Dubai", device: "New-Android", channel: "wire", currency, country: "AE" }],
+      cyberEvents: [
+        { user: u(9), event: "SIM swap detected on carrier port", ts: past(15) },
+        { user: u(9), event: "New device registered for MFA", ts: past(10) },
+      ],
+      expected: { band: "Block", composite_min: 85, decision: "blocked", explanation: "SIM swap force-blocks + ATO chain." } },
+
+    { category: "account_takeover", label: "🛡️ Account Takeover", description: "VPN + impossible travel + new device + wire.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(10), amount: large, merchant: "Foreign vendor", location: "Beijing", device: "New-Windows", channel: "wire", currency, country: "CN" }],
+      cyberEvents: [
+        { user: u(10), event: "VPN Login", ts: past(20) },
+        { user: u(10), event: "Impossible travel detected", ts: past(12) },
+        { user: u(10), event: "New device registered for MFA", ts: past(8) },
+        { user: u(10), event: "MFA fatigue: 14 push denials in 3 minutes", ts: past(5) },
+      ],
+      expected: { band: "Block", composite_min: 85, decision: "blocked", explanation: "ATO combo + xcorr precedes tx." } },
+
+    { category: "malware_device", label: "🦠 Malware-Infected Device", description: "C2 beacon on customer endpoint.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(11), amount: mid * 4, merchant: "Vendor", location: "London", device: "Windows", channel: "wire", currency, country: "GB" }],
+      cyberEvents: [{ user: u(11), event: "Beaconing pattern to known C2 (jitter 30s)", ts: past(10) }],
+      expected: { band: "Block", composite_min: 85, decision: "blocked", explanation: "Malware signal force-blocks." } },
+
+    { category: "vpn_tor", label: "🌐 VPN/TOR Login", description: "Session via Tor exit before transaction.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(12), amount: mid * 2, merchant: "Vendor", location: "Amsterdam", device: "Linux", channel: "card", currency, country: "NL" }],
+      cyberEvents: [{ user: u(12), event: "Tor exit node login", ts: past(6) }],
+      expected: { band: "Pending Review", composite_min: 50, decision: "pending", explanation: "Tor session + geo drift." } },
+
+    { category: "impossible_travel", label: "✈️ Impossible Travel", description: "Two logins from far-apart geos in minutes.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(13), amount: mid * 3, merchant: "ATM cashout", location: "Dubai", device: "iPhone", channel: "card", currency, country: "AE" }],
+      cyberEvents: [{ user: u(13), event: "Impossible travel: London → Dubai in 5 min", ts: past(4) }],
+      expected: { band: "High Risk", composite_min: 65, decision: "pending", explanation: "Impossible travel + xcorr + foreign." } },
+
+    { category: "money_laundering", label: "💰 Money Laundering (Structuring)", description: "Multiple sub-threshold transfers.",
+      transactions: [
+        { txn_id: uid("TXN"), user_id: u(14), amount: large * 0.9, merchant: "Beneficiary A", channel: "wire", currency, ts: past(30) },
+        { txn_id: uid("TXN"), user_id: u(14), amount: large * 0.92, merchant: "Beneficiary B", channel: "wire", currency, ts: past(15) },
+        { txn_id: uid("TXN"), user_id: u(14), amount: large * 0.95, merchant: "Beneficiary C", channel: "wire", currency, ts: past(2) },
+      ],
+      cyberEvents: [],
+      expected: { band: "High Risk", composite_min: 65, decision: "pending", explanation: "Structuring pattern near reporting threshold." } },
+
+    { category: "crypto_exchange", label: "🪙 Crypto Exchange", description: "Wire to crypto exchange abroad.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(15), amount: large, merchant: "Binance deposit", location: "Dubai", device: "Android", channel: "crypto", currency, country: "AE" }],
+      cyberEvents: [{ user: u(15), event: "VPN Login" }],
+      expected: { band: "High Risk", composite_min: 70, decision: "pending", explanation: "Crypto + large + VPN + foreign." } },
+
+    { category: "quantum_threat", label: "⚛️ Quantum Threat Simulation", description: "Sensitive wire over weak TLS on legacy asset.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(16), amount: large, merchant: "Legacy corp banking", location: "London", channel: "wire", currency, country: "GB" }],
+      cyberEvents: [],
+      expected: { band: "Pending Review", composite_min: 45, decision: "pending", explanation: "HNDL + weak-cipher endpoint on wire." } },
+
+    { category: "insider_threat", label: "👥 Insider Threat", description: "Off-hours large transfer from new device.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(17), amount: large, merchant: "Personal account", channel: "wire", currency, ts: new Date(new Date().setUTCHours(2, 30, 0, 0)).toISOString() }],
+      cyberEvents: [{ user: u(17), event: "Unusual sudo escalation off-hours", ts: past(20) }],
+      expected: { band: "High Risk", composite_min: 65, decision: "pending", explanation: "Off-hours + large + escalation." } },
+
+    { category: "bot_attack", label: "🤖 Bot / Automated Attack", description: "Headless client hammering payment API.",
+      transactions: Array.from({ length: 4 }, (_, i) => ({ txn_id: uid("TXN"), user_id: u(18), amount: small * (i + 1), merchant: `Test${i}`, channel: "card", currency, ts: past(9 - i * 2) })),
+      cyberEvents: [{ user: u(18), event: "Bot / automated client signature (puppeteer)" }],
+      expected: { band: "High Risk", composite_min: 65, decision: "pending", explanation: "Rapid velocity + bot signature." } },
+
+    { category: "phishing", label: "🎣 Phishing Compromise", description: "Credential harvest followed by wire.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(19), amount: mid * 4, merchant: "Attacker wallet", channel: "wire", currency, country: "RU" }],
+      cyberEvents: [{ user: u(19), event: "Phishing credential harvest confirmed", ts: past(25) }],
+      expected: { band: "High Risk", composite_min: 70, decision: "pending", explanation: "Phishing + xcorr + high-risk geo." } },
+
+    { category: "credential_stuffing", label: "🔐 Credential Stuffing", description: "Failed login burst preceding tx.",
+      transactions: [{ txn_id: uid("TXN"), user_id: u(20), amount: mid * 2, merchant: "Vendor", channel: "card", currency }],
+      cyberEvents: [
+        { user: u(20), event: "Credential stuffing attempt failed login", ts: past(30) },
+        { user: u(20), event: "Credential stuffing attempt failed login", ts: past(29) },
+        { user: u(20), event: "Credential stuffing attempt failed login", ts: past(28) },
+      ],
+      expected: { band: "Pending Review", composite_min: 45, decision: "pending", explanation: "Credential stuffing burst." } },
+
+    { category: "high_velocity", label: "⚡ High-Velocity Transactions", description: "5 transactions in under 10 minutes.",
+      transactions: Array.from({ length: 5 }, (_, i) => ({ txn_id: uid("TXN"), user_id: u(21), amount: mid, merchant: `V${i}`, channel: "card", currency, ts: past(9 - i * 2) })),
+      cyberEvents: [],
+      expected: { band: "Pending Review", composite_min: 50, decision: "pending", explanation: "Rapid velocity signal fires." } },
+  ];
+}
+
+export const listDemoPresets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await context.supabase.from("profiles").select("currency").eq("id", context.userId).maybeSingle();
+    return buildDemoPresets(profile?.currency || "INR");
   });
