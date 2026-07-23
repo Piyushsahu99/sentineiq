@@ -211,9 +211,10 @@ export function runRules(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>):
   const structFloor = large * 1.7;   // ~8.5k USD-equiv
   const structCeil = large * 2;      // ~10k USD-equiv
   const structuring = ctx.recentTx.filter((t: any) => Number(t.amount) >= structFloor && Number(t.amount) < structCeil);
-  if (structuring.length >= 2) push({
-    id: "fraud.structuring", kind: "fraud", name: `Structuring: ${structuring.length} txs just under reporting threshold`,
-    weight: 16, confidence: 84,
+  const structuringMatch = structuring.length + (amt >= structFloor && amt < structCeil ? 1 : 0);
+  if (structuringMatch >= 2) push({
+    id: "fraud.structuring", kind: "fraud", name: `Structuring: ${structuringMatch} txs just under reporting threshold`,
+    weight: 20 + Math.min(8, structuringMatch * 2), confidence: 86,
     evidence: structuring.slice(0, 4).map((t: any) => ({ source: "transactions", ref_id: t.id, ts: t.created_at, note: `${t.currency ?? ""} ${t.amount}` })),
   });
 
