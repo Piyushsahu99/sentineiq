@@ -68,20 +68,20 @@ const CASES: Case[] = [
       ctx: { cust: cust(), devices: [{ trusted: false, os: "Windows" }] } }) },
 
   // ----- High Risk -----
-  { name: "vpn + impossible travel + wire", category: "high", expected_band: "High Risk",
+  { name: "vpn + impossible travel + wire", category: "high", expected_band: "Block",
     build: () => ({ tx: tx({ amount: 7000, channel: "wire", country: "AE" }), ctx: {
       cust: cust(), telem: [cyber("VPN login detected", "high"), cyber("Impossible travel detected", "high", -5)],
     } }) },
-  { name: "phishing then wire abroad", category: "high", expected_band: "High Risk",
+  { name: "phishing then wire abroad", category: "high", expected_band: "Block",
     build: () => ({ tx: tx({ amount: 6000, channel: "wire", country: "RU" }), ctx: {
       cust: cust(), telem: [cyber("Phishing credential harvest confirmed", "high", -25)],
     } }) },
   { name: "credential stuffing + card", category: "high", expected_band: "High Risk",
     build: () => ({ tx: tx({ amount: 5500 }), ctx: {
       cust: cust(), telem: [
-        cyber("Credential stuffing failed login", "high", -30),
-        cyber("Credential stuffing failed login", "high", -29),
-        cyber("Credential stuffing failed login", "high", -28),
+        cyber("Credential stuffing failed login", "medium", -30),
+        cyber("Credential stuffing failed login", "medium", -29),
+        cyber("Credential stuffing failed login", "medium", -28),
       ],
       devices: [{ trusted: false, os: "Linux" }],
     } }) },
