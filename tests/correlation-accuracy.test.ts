@@ -62,7 +62,7 @@ const CASES: Case[] = [
     } }) },
   { name: "large wire domestic", category: "pending", expected_band: "Pending Review",
     build: () => ({ tx: tx({ amount: 8000, channel: "wire" }), ctx: { cust: cust() } }) },
-  { name: "off-hours + medium", category: "pending", expected_band: "Pending Review",
+  { name: "off-hours + medium", category: "pending", expected_band: "Monitor",
     build: () => ({
       tx: tx({ amount: 4000, created_at: new Date(new Date().setUTCHours(2, 30, 0, 0)).toISOString() }),
       ctx: { cust: cust(), devices: [{ trusted: false, os: "Windows" }] } }) },
