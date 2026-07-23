@@ -451,6 +451,25 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   };
 }
 
+// ---------- pure scorer (no DB, no suppressions) ----------
+// Used by tests and the in-app accuracy report to run the engine against
+// synthetic contexts without hitting Supabase.
+export type PureContext = {
+  cust?: { id?: string; country?: string; risk_baseline?: number } | null;
+  telem?: any[]; iocs?: any[]; sessions?: any[]; devices?: any[];
+  recentTx?: any[]; quantum?: any[]; beneficiaries?: any[];
+};
+export function scoreOnly(tx: any, ctx: PureContext): ScoreResult {
+  const fullCtx = {
+    cust: ctx.cust ?? null, telem: ctx.telem ?? [], iocs: ctx.iocs ?? [],
+    sessions: ctx.sessions ?? [], devices: ctx.devices ?? [],
+    recentTx: ctx.recentTx ?? [], quantum: ctx.quantum ?? [],
+    beneficiaries: ctx.beneficiaries ?? [],
+  } as any;
+  const signals = runRules(tx, fullCtx);
+  return score(tx, fullCtx, signals, []);
+}
+
 // ---------- persist ----------
 export async function scoreAndPersist(supabaseAdmin: any, txId: string): Promise<ScoreResult> {
   const { data: tx, error: txErr } = await supabaseAdmin.from("transactions").select("*").eq("id", txId).maybeSingle();
