@@ -1,165 +1,71 @@
+# Strengthen Correlation Engine + Accuracy Testing + Live Metrics
 
-# Upgrade Correlation Engine + Add Categorized Demo Datasets
+Goal: make the correlation engine more accurate on large, varied data, prove it with a repeatable accuracy test, and ensure every dashboard/graph reflects the new results.
 
-Improve the existing engine in place — no rebuild. Everything lands in `src/lib/correlation.functions.ts`, `src/lib/ingest.functions.ts`, `src/lib/seed.functions.ts`, the ingest UI, and one small schema addition. Currency/RLS/auth/routing untouched.
+## 1. Expand "training" dataset (labeled scenarios)
 
-## 1. Unified weighted engine (shared, no duplicated inline copy)
+Add a curated labeled corpus in `src/lib/mock/labeled-scenarios.ts` covering ~200 cases across the categories we already sketched:
+- Normal / low-risk baselines (spending patterns, recurring merchants, trusted device)
+- Fraud: card-not-present, account takeover, SIM swap chain, mule payouts, wire to sanctioned country, dormant reactivation, velocity abuse, merchant category anomaly, structuring
+- Cyber: VPN + impossible travel, MFA fatigue, new-device + high-value, credential-stuffing → payment, malware beacon + wire
+- Quantum: HNDL harvest, weak-TLS session on payment endpoint
+- Adversarial edge cases: legit VPN traveler, expected large payroll, new merchant but small amount
 
-Today the correlation logic exists twice: once in `correlation.functions.ts` and a hand-copied clone inside `ingest.functions.ts::importInline()`. They drift. Fix:
+Each case: `{ id, category, expected_band, expected_min_score, expected_max_score, transactions[], cyberEvents[], notes }`.
 
-- Extract `loadContext`, `runRules`, `applySuppressions`, and a new `scoreAndPersist(tx)` into a plain server-only helper `src/lib/correlation-core.server.ts` (no `createServerFn` wrapper, safe to call from other server handlers).
-- Both `correlateTransaction` (single tx RPC) and `ingestBankBatch` (loop) call `scoreAndPersist` — one source of truth.
+## 2. Tune the correlation core against the labeled set
 
-## 2. Weighted scoring + combo escalation (the accuracy fix)
+In `src/lib/correlation-core.server.ts`:
+- Recalibrate signal weights and combo escalators using the labeled corpus (grid search over weight multipliers offline via the test runner in step 3, commit the tuned constants).
+- Add missing signals surfaced by the corpus: velocity (N tx / 10 min), structuring (just-under-threshold), sanctioned-country list, merchant-category-code drift, dormant-reactivation, mule-payout fanout.
+- Strengthen behavioral baselines: per-customer rolling z-score on amount, hour-of-day KDE, merchant novelty, device/IP entropy over 90 days.
+- Combo escalators: enforce hard floors (e.g. SIM swap + new device + wire ≥ 85 = Block) instead of averaging.
+- Add a `confidence` calculation based on signal count + evidence density, not just weight sum.
 
-Replace naive `sum(weight) + baseline/5` with a two-stage model:
+## 3. Accuracy test harness
 
-**Stage A — expanded typed signals** (all bank-grade indicators the user listed):
+Add `tests/correlation-accuracy.test.ts` (vitest):
+- Load labeled corpus, run the pure scoring function (`scoreOnly`, extracted from `scoreAndPersist` so it doesn't need Supabase) against each case.
+- Assert per-case: predicted band == expected band, score within expected range.
+- Aggregate metrics: precision/recall per category, confusion matrix across bands, false-positive rate on "normal" cases, block-rate on "fraud" cases.
+- Fail the suite if overall accuracy < 90% or FPR on normal > 5%.
+- Print a summary table on run.
 
-| Signal id | Weight | Notes |
-|---|---|---|
-| `cyber.vpn_login` | 8 | session or event marked VPN |
-| `cyber.tor_login` | 14 | Tor exit / anonymizer |
-| `cyber.impossible_travel` | 16 | already exists, weight bumped |
-| `cyber.sim_swap` | 20 | regex `/sim.?swap|carrier port/i` on telemetry |
-| `cyber.malware_beacon` | 18 | existing |
-| `cyber.mfa_fatigue` | 14 | `/mfa fatigue|push denials/i` |
-| `cyber.credential_stuffing` | 12 | existing auth-burst |
-| `cyber.phishing_hit` | 12 | `/phish|credential harvest/i` |
-| `fraud.new_device` | 10 | first-seen device for this customer within 24h |
-| `fraud.dormant_reactivation` | 12 | no tx in 60d then large tx |
-| `fraud.off_hours` | 6 | tx at customer local 00:00–05:00 |
-| `fraud.rapid_velocity` | 12 | ≥3 tx in 10 min |
-| `fraud.structuring_9k` | 15 | existing |
-| `fraud.amount_zscore` | dynamic | existing |
-| `fraud.large_amount` | 14 | existing (ingest) |
-| `fraud.geo_drift` | 6/15 | existing |
-| `fraud.foreign_high_risk` | 12 | tx to `HIGH_RISK_GEO` |
-| `fraud.wire_or_crypto_high` | 10 | wire/crypto ≥ threshold (currency-aware via FX table) |
-| `fraud.unusual_mcc` | 6 | merchant category never seen before for customer |
-| `fraud.new_beneficiary_untrusted` | 10 | beneficiary marked untrusted / first-seen |
-| `xcorr.cyber_precedes_tx` | 18 | existing, widened window to 60 min |
-| `xcorr.multi_event_chain` | dynamic (see combos) | |
-| `quantum.hndl_exposure` / `quantum.weak_cipher_endpoint` | existing |
+Add `bun run test:accuracy` script in `package.json`.
 
-**Stage B — combo escalators** (fix "averaging hides attacks"):
+## 4. Large-data performance
 
-Given the fired signal set S:
-- `combo.ato_chain` = any 3 of `{vpn_login, tor_login, impossible_travel, new_device, sim_swap, mfa_fatigue}` present → **+25** and force `dominant_kind = "xcorr"`.
-- `combo.wire_out_of_country` = `{fraud.large_amount|amount_zscore, fraud.geo_drift|foreign_high_risk, fraud.wire_or_crypto_high}` all present → **+20**.
-- `combo.full_kill_chain` = cyber signal + xcorr precedes + fraud amount signal → **+30**, `composite = max(composite, 90)`.
+- Batch context loads in `loadContext` (single query per customer window instead of per-signal).
+- Cap history windows and add indices via migration: `transactions(customer_id, created_at desc)`, `cyber_telemetry(customer_id, created_at desc)`.
+- Stream batch ingest in chunks of 50 with `Promise.all`, so 200-tx uploads stay under a few seconds.
 
-`composite = clamp(sum(weights) + escalation_bonus + baseline/5, 0, 100)`.
+## 5. Propagate results to every dashboard
 
-**Threshold bands** (used everywhere — engine, badges, ingest UI):
+Ensure the following pages read live aggregates from `ai_investigations` / `alerts` / `tx_check_history` (not mocks):
+- `_app.dashboard.tsx`: KPI cards (block rate, avg risk, alerts/hr, FPR from feedback), sparkline from last 24h investigations, band distribution donut.
+- `_app.correlation.tsx`: signal-kind breakdown, top escalations, weighted contributor chart from real investigations.
+- `_app.behavior.tsx`: anomaly counts derived from behavioral signals in latest investigations.
+- `_app.explainable-ai.tsx`: risk breakdown + timeline already wired — verify with new signals.
+- `_app.transactions.tsx`: verdict pill + composite score column from `tx_check_history`.
+- `_app.threat-intel.tsx` / threat map: mark IPs/countries appearing in cyber signals of recent investigations.
+- `_app.quantum.tsx`: counts from quantum-kind signals.
+- `_app.reports.tsx`: totals recomputed from live tables in chosen currency.
 
-| Band | Range | Status | UI label |
-|---|---|---|---|
-| Approved | 0–29 | `approved` | green |
-| Monitor | 30–49 | `approved` (tag "monitor") | teal |
-| Pending Review | 50–69 | `pending` | amber |
-| High Risk | 70–84 | `pending` (tag "high-risk") | orange |
-| Block | 85–100 | `blocked` | red |
+Add a shared `src/lib/live-queries.ts` helper (already exists) with new aggregators the pages consume via `useSuspenseQuery`.
 
-Force-block guard: if any of `sim_swap`, `malware_beacon`, `combo.full_kill_chain` fire, status is `blocked` regardless of numeric score.
+## 6. Load Demo Dataset button
 
-## 3. Behavior/time analysis (multi-event, not single-event)
-
-`loadContext` extended to pull:
-- last 90 days of tx for the customer (not just 30)
-- customer's typical local hour distribution (rolling)
-- distinct merchants and MCCs seen
-- distinct devices/session countries seen
-- last-active timestamp for dormancy
-
-Signals `fraud.off_hours`, `fraud.dormant_reactivation`, `fraud.unusual_mcc`, `fraud.new_device`, `fraud.rapid_velocity` all use these — that's the "multiple events over time" requirement.
-
-## 4. Explanation payload (Risk Breakdown + Timeline)
-
-`ai_investigations.explanation` (jsonb, already exists) extended to:
-
-```json
-{
-  "composite": 92,
-  "band": "Block",
-  "calibrated_confidence": 88,
-  "dominant_kind": "xcorr",
-  "signals": [ ... existing ... ],
-  "escalations": [{ "id": "combo.ato_chain", "bonus": 25, "reason": "vpn+impossible+new_device fired together" }],
-  "risk_breakdown": [
-    { "component": "Base signals", "value": 62 },
-    { "component": "Combo escalations", "value": 25 },
-    { "component": "Customer baseline", "value": 5 }
-  ],
-  "timeline": [
-    { "ts": "…", "kind": "cyber", "event": "VPN Login", "delta_min": -12 },
-    { "ts": "…", "kind": "cyber", "event": "Impossible travel", "delta_min": -6 },
-    { "ts": "…", "kind": "tx", "event": "Wire ₹2.5L → AE", "delta_min": 0 },
-    { "ts": "…", "kind": "tx", "event": "Wire ₹9.8k → AE", "delta_min": 4 }
-  ],
-  "recommended_action": "BLOCK — freeze account, force reset, notify customer via secondary channel"
-}
-```
-
-Timeline uses ±60 min around the tx across `cyber_telemetry` (customer-scoped via metadata) + prior/subsequent transactions.
-
-Gemini narrative prompt updated to consume `risk_breakdown` + `escalations` + `timeline` so the "AI Explanation" card in `/ingest` returns the enterprise-style write-up. Falls back to a deterministic template if `LOVABLE_API_KEY` is missing or the call errors.
-
-## 5. UI updates (small, in place)
-
-- **`/ingest` result rows**: show band pill, composite, confidence %, "Risk Breakdown" expandable (bars per component), "Timeline" expandable (vertical event log with cyber/tx icons and `±min` offsets), existing AI Explanation panel below.
-- **`/correlation` page**: same Risk Breakdown block above kill chain; badge uses new bands.
-- **`/investigations` cards**: band pill instead of raw score.
-
-No new routes. Uses existing `GlassCard`, `RiskBar`, `RiskBadge`, `formatMoney`.
-
-## 6. Categorized demo dataset generator
-
-Add `loadDemoDataset({ category })` server fn in `src/lib/seed.functions.ts` (analyst-gated). 20 categories with realistic JSON payloads + expected outcome, matching the user list:
-
-`normal`, `low_risk`, `medium_risk`, `high_risk`, `critical_fraud`, `international`, `card_fraud`, `wire_fraud`, `sim_swap`, `account_takeover`, `malware_device`, `vpn_tor`, `impossible_travel`, `money_laundering`, `crypto_exchange`, `quantum_threat`, `insider_threat`, `bot_attack`, `phishing`, `credential_stuffing`, `high_velocity`.
-
-Each preset:
-```ts
-{
-  category: "sim_swap",
-  label: "📱 SIM Swap",
-  transactions: [ /* realistic tx JSON */ ],
-  cyberEvents: [ /* realistic event JSON */ ],
-  expected: { band: "Block", composite_min: 85, decision: "blocked",
-              explanation: "SIM swap + new device + large wire → ATO chain escalation" }
-}
-```
-
-New tab **"Demo Datasets"** in `/ingest` renders a 4-column grid of category cards. Each card shows label + expected band + "Load & analyze" button which:
-1. Prefills the JSON tab with the preset payload.
-2. Calls `ingestBankBatch` immediately.
-3. Renders results table with actual vs expected composite side-by-side (green tick if band matches, red cross otherwise) — this is the built-in validation the user asked for.
-
-## 7. Schema (single migration)
-
-Only additive:
-
-```sql
-ALTER TABLE public.ai_investigations
-  ADD COLUMN IF NOT EXISTS risk_breakdown jsonb,
-  ADD COLUMN IF NOT EXISTS timeline jsonb,
-  ADD COLUMN IF NOT EXISTS band text;
-```
-
-No RLS/grant changes (table already gated). Existing rows unaffected (nullable).
-
-## 8. Out of scope
-
-- No changes to auth, RLS on other tables, currency helpers, sidebar, threat map, quantum page internals.
-- No FastAPI, no new external service.
-- No changes to `_authenticated` gate or profile schema.
+In `/ingest` and `/settings → Demo Data`, add "Load labeled dataset" that ingests the full corpus, then shows a mini accuracy report (predicted vs expected band per case) so users can see the engine's accuracy live in-app.
 
 ## Technical notes
 
-- Combo detection is O(n) over the fired signal set — cheap.
-- FX threshold table reused from `seed.functions.ts` so "large amount" is currency-correct (₹1L, $1.2k equivalent, etc.).
-- Force-block signals bypass suppressions (`sim_swap`, `malware_beacon` cannot be suppressed to below block band).
-- `loadDemoDataset` reuses `ingestBankBatch` — no duplicate ingestion code path, so demo results and real bank results score identically.
-- `.server.ts` core file imported dynamically inside handlers to keep the client bundle clean.
-- After migration approves, types regenerate and UI can read `band`/`risk_breakdown`/`timeline` directly.
+- Keep `scoreAndPersist` as the persistence wrapper; extract pure `scoreOnly(ctx, input)` for tests.
+- Migration: new indices only, no schema changes beyond that.
+- No new npm deps; vitest and existing Supabase/AI stack are enough.
+- All currency in aggregates goes through `formatMoney` + `usePrefs`.
+
+## Out of scope
+
+- No FastAPI or external ML service.
+- No changes to auth, RLS policies, or role model.
+- No visual redesign — only data-source swaps and new small chart tiles where a metric is missing.
