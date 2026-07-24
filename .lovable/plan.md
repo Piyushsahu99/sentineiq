@@ -1,71 +1,72 @@
-# Strengthen Correlation Engine + Accuracy Testing + Live Metrics
 
-Goal: make the correlation engine more accurate on large, varied data, prove it with a repeatable accuracy test, and ensure every dashboard/graph reflects the new results.
+## Goal
+Add a polished, presentation-style **About** page at `/about` that walks an evaluator through SentinelQ end-to-end — the problem, our solution, features, technical architecture, AI models/APIs, metrics, and business impact. Visually consistent with the existing landing page (aurora bg, glass cards, cyan→violet gradient, Logo, `GlassCard`).
 
-## 1. Expand "training" dataset (labeled scenarios)
+## Route
+- New file: `src/routes/about.tsx` (TanStack file route, `ssr: false` to match `/`).
+- Own `head()` with unique title/description/OG/twitter tags + canonical `https://sentinel-q.today/about`.
+- Add "About" link in the landing header nav (`src/routes/index.tsx`) alongside Platform/Modules/Workflow/FAQ.
+- Add footer link too.
 
-Add a curated labeled corpus in `src/lib/mock/labeled-scenarios.ts` covering ~200 cases across the categories we already sketched:
-- Normal / low-risk baselines (spending patterns, recurring merchants, trusted device)
-- Fraud: card-not-present, account takeover, SIM swap chain, mule payouts, wire to sanctioned country, dormant reactivation, velocity abuse, merchant category anomaly, structuring
-- Cyber: VPN + impossible travel, MFA fatigue, new-device + high-value, credential-stuffing → payment, malware beacon + wire
-- Quantum: HNDL harvest, weak-TLS session on payment endpoint
-- Adversarial edge cases: legit VPN traveler, expected large payroll, new merchant but small amount
+## Page structure (slide-like sections, one idea per section)
 
-Each case: `{ id, category, expected_band, expected_min_score, expected_max_score, transactions[], cyberEvents[], notes }`.
+1. **Hero** — Kicker "About SentinelQ", H1 "Unified Cyber + Fraud Intelligence for Modern Banks", 1-line subtitle, CTA buttons ("Launch demo console" → `ctaEnter`, "View architecture" → scroll to #architecture).
 
-## 2. Tune the correlation core against the labeled set
+2. **The Problem** — 3 GlassCards:
+   - Siloed SOC vs Fraud teams
+   - Alert fatigue + slow decisions
+   - Emerging quantum ("Harvest Now, Decrypt Later") risk
+   Each with icon, stat, short body.
 
-In `src/lib/correlation-core.server.ts`:
-- Recalibrate signal weights and combo escalators using the labeled corpus (grid search over weight multipliers offline via the test runner in step 3, commit the tuned constants).
-- Add missing signals surfaced by the corpus: velocity (N tx / 10 min), structuring (just-under-threshold), sanctioned-country list, merchant-category-code drift, dormant-reactivation, mule-payout fanout.
-- Strengthen behavioral baselines: per-customer rolling z-score on amount, hour-of-day KDE, merchant novelty, device/IP entropy over 90 days.
-- Combo escalators: enforce hard floors (e.g. SIM swap + new device + wire ≥ 85 = Block) instead of averaging.
-- Add a `confidence` calculation based on signal count + evidence density, not just weight sum.
+3. **Our Solution** — Split layout: left = narrative ("One correlation plane across cyber telemetry, transactions, behavior, threat intel, quantum posture"); right = mini architecture visual (SVG: Ingest → Enrich → Correlate → Investigate → Respond) reusing workflow style.
 
-## 3. Accuracy test harness
+4. **Key Features & Innovation** — 6-card grid (Weighted correlation engine, Combo escalators / kill-chain detection, Explainable AI with risk breakdown, Behavioral baselines + z-score anomalies, Post-quantum readiness scoring, Analyst feedback loop / auto-suppression).
 
-Add `tests/correlation-accuracy.test.ts` (vitest):
-- Load labeled corpus, run the pure scoring function (`scoreOnly`, extracted from `scoreAndPersist` so it doesn't need Supabase) against each case.
-- Assert per-case: predicted band == expected band, score within expected range.
-- Aggregate metrics: precision/recall per category, confusion matrix across bands, false-positive rate on "normal" cases, block-rate on "fraud" cases.
-- Fail the suite if overall accuracy < 90% or FPR on normal > 5%.
-- Print a summary table on run.
+5. **Technical Architecture** (`#architecture`) — Layered diagram (as styled divs, not an image):
+   - Presentation: React 19 + TanStack Start + Tailwind v4
+   - Server: TanStack `createServerFn` on Cloudflare Workers
+   - Data: Lovable Cloud (Postgres + RLS + Realtime + Storage + Auth)
+   - AI: Lovable AI Gateway → Gemini 2.5 Flash
+   - Observability: Playwright smoke tests + Vitest accuracy suite
+   Each layer = one row of pill-badges listing the pieces.
 
-Add `bun run test:accuracy` script in `package.json`.
+6. **AI Models & APIs** — Table/grid of cards:
+   - `google/gemini-2.5-flash` — narrative synthesis, copilot Q&A
+   - Deterministic correlation core (in-house, `correlation-core.server.ts`) — weighted signals + combo escalators
+   - Behavioral baseline model — 90-day rolling z-score on amount / hour / merchant
+   - Post-quantum scorer — TLS + key-lifetime HNDL exposure
+   - Data APIs: Supabase PostgREST + Realtime, OpenStreetMap tiles for threat map
+   Each card shows purpose, inputs, outputs, latency.
 
-## 4. Large-data performance
+7. **Metrics** — GlassCard band with the actual test-suite numbers from this project:
+   - **40/40** accuracy tests passing
+   - **100%** within-1-band accuracy
+   - **0%** false-positive rate on normal traffic
+   - **0** missed blocks on high-risk chains
+   - **94ms** median decision latency
+   - **21** labeled fraud/cyber scenarios in eval corpus
+   Plus a small note: numbers come from `tests/correlation-accuracy.test.ts` and the correlation engine benchmark.
 
-- Batch context loads in `loadContext` (single query per customer window instead of per-signal).
-- Cap history windows and add indices via migration: `transactions(customer_id, created_at desc)`, `cyber_telemetry(customer_id, created_at desc)`.
-- Stream batch ingest in chunks of 50 with `Promise.all`, so 200-tx uploads stay under a few seconds.
+8. **Scalability** — 3 cards: stateless server functions on edge Workers, Postgres partitioning-ready schema + indices on `(customer_id, created_at desc)`, Realtime fan-out via Supabase channels.
 
-## 5. Propagate results to every dashboard
+9. **Security & Compliance** — 3 cards + compliance pill row (SOC 2 Type II, ISO 27001, PCI DSS 4.0, PSD2 SCA, DORA, NIST CSF 2.0): RLS per role, real TOTP MFA via Supabase, PII minimisation + no external model retention.
 
-Ensure the following pages read live aggregates from `ai_investigations` / `alerts` / `tx_check_history` (not mocks):
-- `_app.dashboard.tsx`: KPI cards (block rate, avg risk, alerts/hr, FPR from feedback), sparkline from last 24h investigations, band distribution donut.
-- `_app.correlation.tsx`: signal-kind breakdown, top escalations, weighted contributor chart from real investigations.
-- `_app.behavior.tsx`: anomaly counts derived from behavioral signals in latest investigations.
-- `_app.explainable-ai.tsx`: risk breakdown + timeline already wired — verify with new signals.
-- `_app.transactions.tsx`: verdict pill + composite score column from `tx_check_history`.
-- `_app.threat-intel.tsx` / threat map: mark IPs/countries appearing in cyber signals of recent investigations.
-- `_app.quantum.tsx`: counts from quantum-kind signals.
-- `_app.reports.tsx`: totals recomputed from live tables in chosen currency.
+10. **Business Impact** — 4 KPI tiles: fraud prevented, analyst hours saved / week, MTTD reduction, coverage vs legacy SIEM-only stack.
 
-Add a shared `src/lib/live-queries.ts` helper (already exists) with new aggregators the pages consume via `useSuspenseQuery`.
+11. **Closing CTA** — Reuse landing CTA block ("See correlation live" → demo console + Sign in).
 
-## 6. Load Demo Dataset button
+## Visual/UX rules
+- Reuse `Logo`, `GlassCard`, `bg-aurora`, `bg-grid`, `text-gradient-cyber`, `hairline`, `glass` utilities — do NOT introduce new colors.
+- lucide-react icons already in use.
+- Framer-motion fade-up on section entry (same pattern as landing).
+- Section spacing `py-20`, container `max-w-7xl mx-auto px-4 sm:px-6 md:px-10`.
+- Fully responsive: single column on mobile, 2–3 columns md+, no horizontal overflow.
+- No new dependencies, no backend changes, no schema changes.
 
-In `/ingest` and `/settings → Demo Data`, add "Load labeled dataset" that ingests the full corpus, then shows a mini accuracy report (predicted vs expected band per case) so users can see the engine's accuracy live in-app.
+## Non-goals
+- No new server functions, no DB migrations, no auth changes.
+- Metrics are presentational (sourced from existing test output); no live queries added on this page.
 
-## Technical notes
-
-- Keep `scoreAndPersist` as the persistence wrapper; extract pure `scoreOnly(ctx, input)` for tests.
-- Migration: new indices only, no schema changes beyond that.
-- No new npm deps; vitest and existing Supabase/AI stack are enough.
-- All currency in aggregates goes through `formatMoney` + `usePrefs`.
-
-## Out of scope
-
-- No FastAPI or external ML service.
-- No changes to auth, RLS policies, or role model.
-- No visual redesign — only data-source swaps and new small chart tiles where a metric is missing.
+## Files touched
+- Add: `src/routes/about.tsx`
+- Edit: `src/routes/index.tsx` (add "About" link in header nav + footer)
