@@ -74,6 +74,7 @@ function Landing() {
           <a href="#platform" className="hover:text-foreground transition">Platform</a>
           <a href="#modules" className="hover:text-foreground transition">Modules</a>
           <a href="#workflow" className="hover:text-foreground transition">Workflow</a>
+          <Link to="/about" className="hover:text-foreground transition">About</Link>
           <a href="#faq" className="hover:text-foreground transition">FAQ</a>
         </nav>
         <div className="flex items-center gap-2 shrink-0">
