@@ -411,15 +411,25 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   const baselineBonus = Math.round(baseline / 5);
   const escalations = detectEscalations(adjustedSignals);
   const escalationBonus = escalations.reduce((s, e) => s + e.bonus, 0);
-  let composite = Math.min(100, Math.max(0, baseSum + baselineBonus + escalationBonus));
+  const rulesScore = Math.min(100, Math.max(0, baseSum + baselineBonus + escalationBonus));
 
-  // full-kill-chain sets a floor
-  if (escalations.some((e) => e.id === "combo.full_kill_chain")) composite = Math.max(composite, 90);
+  // ---- Random Forest (hybrid) ----
+  const features = buildFeatures(tx, ctx);
+  const rfProb = rfProbability(features);
+  const rfScore = Math.round(rfProb * 100);
+  const rfTop = rfTopFeatures(features, 5);
 
-  // force-block signals
+  // force-block signals — hard rules always win, RF only shifts the gray zone
   const ids = new Set(adjustedSignals.map((s) => s.id));
   const forceBlock = ids.has("cyber.sim_swap") || ids.has("cyber.malware_beacon") || escalations.some((e) => e.id === "combo.full_kill_chain");
-  if (forceBlock) composite = Math.max(composite, 88);
+
+  // Blend: 55% rules + 45% RF unless a hard rule fires
+  let composite: number;
+  if (forceBlock) composite = Math.max(88, rulesScore);
+  else if (escalations.some((e) => e.id === "combo.full_kill_chain")) composite = Math.max(90, rulesScore);
+  else composite = Math.round(0.55 * rulesScore + 0.45 * rfScore);
+
+  composite = Math.min(100, Math.max(0, composite));
 
   const kindWeights = adjustedSignals.reduce<Record<SignalKind, number>>(
     (acc, s) => { acc[s.kind] = (acc[s.kind] ?? 0) + s.weight; return acc; },
@@ -429,7 +439,8 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   if (escalations.some((e) => e.id === "combo.ato_chain")) dominant = "xcorr";
 
   const avgConf = adjustedSignals.length ? Math.round(adjustedSignals.reduce((s, x) => s + x.confidence, 0) / adjustedSignals.length) : 50;
-  const calibrated = Math.round(avgConf * 0.6 + composite * 0.4);
+  // Calibrated confidence now blends rule confidence, RF probability, and composite
+  const calibrated = Math.round(avgConf * 0.35 + rfProb * 100 * 0.35 + composite * 0.30);
   const band = bandFor(composite);
   const status = statusFor(band, forceBlock);
 
@@ -437,6 +448,9 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
     { component: "Base signals", value: baseSum },
     { component: "Combo escalations", value: escalationBonus },
     { component: "Customer baseline", value: baselineBonus },
+    { component: "Rules subtotal", value: rulesScore },
+    { component: "RF probability × 100", value: rfScore },
+    { component: "Hybrid composite", value: composite },
   ];
 
   const timeline = buildTimeline(tx, ctx);
@@ -457,6 +471,7 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
     signals: adjustedSignals, escalations, risk_breakdown, timeline,
     recommended_action, suppressed, force_block: forceBlock,
     investigation_id: null,
+    rf: { probability: Math.round(rfProb * 10000) / 10000, score: rfScore, top_features: rfTop },
   };
 }
 
