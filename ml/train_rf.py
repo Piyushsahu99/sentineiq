@@ -18,6 +18,10 @@ from pathlib import Path
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.calibration import CalibratedClassifierCV
+try:
+    from sklearn.frozen import FrozenEstimator  # sklearn >= 1.6
+except Exception:  # pragma: no cover
+    FrozenEstimator = None  # type: ignore
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     roc_auc_score, average_precision_score, confusion_matrix,
@@ -205,7 +209,8 @@ def main():
         class_weight="balanced", random_state=42, n_jobs=-1,
     )
     base2.fit(Xtr2, ytr2)
-    cal = CalibratedClassifierCV(base2, method="isotonic", cv="prefit")
+    frozen = FrozenEstimator(base2) if FrozenEstimator is not None else base2
+    cal = CalibratedClassifierCV(frozen, method="isotonic")
     cal.fit(Xcal, ycal)
 
     # Metrics on test
