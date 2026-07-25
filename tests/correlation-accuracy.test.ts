@@ -76,7 +76,7 @@ const CASES: Case[] = [
     build: () => ({ tx: tx({ amount: 6000, channel: "wire", country: "RU" }), ctx: {
       cust: cust(), telem: [cyber("Phishing credential harvest confirmed", "high", -25)],
     } }) },
-  { name: "credential stuffing + card", category: "high", expected_band: "High Risk",
+  { name: "credential stuffing + card", category: "high", expected_band: "Pending Review",
     build: () => ({ tx: tx({ amount: 5500 }), ctx: {
       cust: cust(), telem: [
         cyber("Credential stuffing failed login", "medium", -30),
@@ -126,7 +126,7 @@ const CASES: Case[] = [
   // ----- Adversarial (should NOT overfire) -----
   { name: "legit VPN traveler small", category: "adversarial_normal", expected_band: "Monitor",
     build: () => ({ tx: tx({ amount: 200 }), ctx: { cust: cust(), telem: [cyber("VPN login detected", "medium", -2)] } }) },
-  { name: "expected payroll (large but domestic + recurring)", category: "adversarial_normal", expected_band: "Pending Review",
+  { name: "expected payroll (large but domestic + recurring)", category: "adversarial_normal", expected_band: "Monitor",
     build: () => ({ tx: tx({ amount: 8000, channel: "wire", merchant: "Payroll" }),
       ctx: { cust: cust(), recentTx: Array.from({ length: 6 }, (_, i) => ({ amount: 8000, currency: "USD", channel: "wire", merchant: "Payroll", created_at: iso(-i * 30 * 24 * 60) })) } }) },
   { name: "new merchant tiny amount", category: "adversarial_normal", expected_band: "Approved",

@@ -1,0 +1,166 @@
+{
+  "trained_at": null,
+  "n_train": 32000,
+  "n_test": 8000,
+  "n_trees": 300,
+  "max_depth": 10,
+  "roc_auc": 0.9751,
+  "pr_auc": 0.9112,
+  "accuracy": 0.9275,
+  "precision": 0.9102,
+  "recall": 0.8213,
+  "f1": 0.8635,
+  "fpr": 0.0314,
+  "confusion_matrix": [
+    [
+      5586,
+      181
+    ],
+    [
+      399,
+      1834
+    ]
+  ],
+  "band_distribution": {
+    "Approved": 4848,
+    "Monitor": 1137,
+    "High Risk": 955,
+    "Block": 1060
+  },
+  "top_importances": [
+    {
+      "feature": "amount_log",
+      "importance": 0.2165
+    },
+    {
+      "feature": "amount_zscore",
+      "importance": 0.162
+    },
+    {
+      "feature": "geo_drift",
+      "importance": 0.1377
+    },
+    {
+      "feature": "structuring_score",
+      "importance": 0.1128
+    },
+    {
+      "feature": "credential_stuffing_count",
+      "importance": 0.0718
+    },
+    {
+      "feature": "is_foreign",
+      "importance": 0.0643
+    },
+    {
+      "feature": "is_wire",
+      "importance": 0.0554
+    },
+    {
+      "feature": "new_device",
+      "importance": 0.0521
+    },
+    {
+      "feature": "tx_velocity_1h",
+      "importance": 0.0345
+    },
+    {
+      "feature": "untrusted_device",
+      "importance": 0.0281
+    },
+    {
+      "feature": "impossible_travel",
+      "importance": 0.0225
+    },
+    {
+      "feature": "vpn_flag",
+      "importance": 0.0126
+    },
+    {
+      "feature": "tx_velocity_24h",
+      "importance": 0.0079
+    },
+    {
+      "feature": "is_offhours",
+      "importance": 0.0065
+    },
+    {
+      "feature": "phishing_recent",
+      "importance": 0.0054
+    }
+  ],
+  "roc_curve": {
+    "fpr": [
+      0.0,
+      0.0003468007629616785,
+      0.0003468007629616785,
+      0.00468181029998266,
+      0.031385469048031904,
+      0.16264955782902724,
+      0.16264955782902724,
+      0.1629963585919889,
+      0.1673313681290099,
+      0.1678515692734524,
+      0.1678515692734524,
+      0.16802496965493324,
+      1.0
+    ],
+    "tpr": [
+      0.0,
+      0.3716972682489924,
+      0.3730407523510972,
+      0.4626063591580833,
+      0.8213166144200627,
+      0.9910434393193014,
+      0.9914912673533364,
+      0.9914912673533364,
+      0.9986565158978952,
+      0.9991043439319302,
+      0.999552171965965,
+      0.999552171965965,
+      1.0
+    ]
+  },
+  "pr_curve": {
+    "precision": [
+      0.279125,
+      0.697282099343955,
+      0.6975,
+      0.69740543919975,
+      0.6979655712050078,
+      0.7019657577679138,
+      0.7021883920076119,
+      0.7024111675126904,
+      0.7023167248492542,
+      0.9101736972704715,
+      0.9745283018867924,
+      0.9976047904191617,
+      0.9976019184652278,
+      0.9975990396158463,
+      0.9975961538461539,
+      1.0
+    ],
+    "recall": [
+      1.0,
+      0.999552171965965,
+      0.999552171965965,
+      0.9991043439319302,
+      0.9986565158978952,
+      0.9914912673533364,
+      0.9914912673533364,
+      0.9914912673533364,
+      0.9910434393193014,
+      0.8213166144200627,
+      0.4626063591580833,
+      0.3730407523510972,
+      0.37259292431706226,
+      0.37214509628302733,
+      0.3716972682489924,
+      0.0
+    ]
+  },
+  "datasets": [
+    "Synthetic bank corpus (PaySim-inspired distributions)"
+  ],
+  "notes": "Calibrated RandomForest, 300 trees, depth=10. Isotonic probability calibration."
+}
