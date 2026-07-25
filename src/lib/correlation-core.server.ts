@@ -2,6 +2,9 @@
 // `correlateTransaction` RPC and the batch `ingestBankBatch` ingest path.
 // Server-only (imports supabaseAdmin dynamically at the call site).
 
+import { rfProbability, rfTopFeatures } from "./ml/rf-infer.server";
+import { buildFeatures } from "./ml/rf-features.server";
+
 export type SignalKind = "fraud" | "cyber" | "xcorr" | "quantum";
 export type Signal = {
   id: string;
@@ -26,6 +29,11 @@ export type ScoreResult = {
   suppressed: string[];
   force_block: boolean;
   investigation_id: string | null;
+  rf: {
+    probability: number;
+    score: number;
+    top_features: Array<{ feature: string; contribution: number }>;
+  };
 };
 
 export type Band = "Approved" | "Monitor" | "Pending Review" | "High Risk" | "Block";
