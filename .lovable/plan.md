@@ -1,72 +1,70 @@
 
-## Goal
-Add a polished, presentation-style **About** page at `/about` that walks an evaluator through SentinelQ end-to-end — the problem, our solution, features, technical architecture, AI models/APIs, metrics, and business impact. Visually consistent with the existing landing page (aurora bg, glass cards, cyan→violet gradient, Logo, `GlassCard`).
+# Random Forest upgrade for SentinelQ correlation engine
 
-## Route
-- New file: `src/routes/about.tsx` (TanStack file route, `ssr: false` to match `/`).
-- Own `head()` with unique title/description/OG/twitter tags + canonical `https://sentinel-q.today/about`.
-- Add "About" link in the landing header nav (`src/routes/index.tsx`) alongside Platform/Modules/Workflow/FAQ.
-- Add footer link too.
+Goal: raise output quality to a level a real bank (Bank of Maharashtra) would accept. Keep the current rules engine (it guarantees hard blocks and explainability), add a trained Random Forest for the ambiguous middle band, and show the accuracy story on the About page.
 
-## Page structure (slide-like sections, one idea per section)
+## 1. Offline training pipeline (Python, not shipped to runtime)
 
-1. **Hero** — Kicker "About SentinelQ", H1 "Unified Cyber + Fraud Intelligence for Modern Banks", 1-line subtitle, CTA buttons ("Launch demo console" → `ctaEnter`, "View architecture" → scroll to #architecture).
+New folder `ml/` at repo root:
 
-2. **The Problem** — 3 GlassCards:
-   - Siloed SOC vs Fraud teams
-   - Alert fatigue + slow decisions
-   - Emerging quantum ("Harvest Now, Decrypt Later") risk
-   Each with icon, stat, short body.
+- `ml/train_rf.py` — scikit-learn `RandomForestClassifier` (400 trees, `max_depth=12`, `class_weight="balanced"`, calibrated with `CalibratedClassifierCV` for real probabilities).
+- `ml/datasets/` — download + adapter scripts for PaySim (Kaggle mirror, no auth) and IEEE-CIS subset. Both mapped into our feature schema.
+- `ml/features.py` — single source of truth mapping raw tx + telemetry → feature vector; mirrored 1:1 in TS.
+- `ml/export_model.py` — dumps a compact `model.json` (arrays of trees: split feature, threshold, left, right, value) + `metrics.json` (ROC/AUC, PR-AUC, confusion matrix, per-band accuracy, feature importances).
+- `ml/README.md` — one-command retrain: `python ml/train_rf.py && python ml/export_model.py`.
 
-3. **Our Solution** — Split layout: left = narrative ("One correlation plane across cyber telemetry, transactions, behavior, threat intel, quantum posture"); right = mini architecture visual (SVG: Ingest → Enrich → Correlate → Investigate → Respond) reusing workflow style.
+Outputs committed to repo: `src/lib/ml/rf-model.json`, `src/lib/ml/rf-metrics.json`. No Python at runtime.
 
-4. **Key Features & Innovation** — 6-card grid (Weighted correlation engine, Combo escalators / kill-chain detection, Explainable AI with risk breakdown, Behavioral baselines + z-score anomalies, Post-quantum readiness scoring, Analyst feedback loop / auto-suppression).
+## 2. Feature vector (24 features)
 
-5. **Technical Architecture** (`#architecture`) — Layered diagram (as styled divs, not an image):
-   - Presentation: React 19 + TanStack Start + Tailwind v4
-   - Server: TanStack `createServerFn` on Cloudflare Workers
-   - Data: Lovable Cloud (Postgres + RLS + Realtime + Storage + Auth)
-   - AI: Lovable AI Gateway → Gemini 2.5 Flash
-   - Observability: Playwright smoke tests + Vitest accuracy suite
-   Each layer = one row of pill-badges listing the pieces.
+Numeric + boolean, all derivable from current `loadContext`:
+amount_log, amount_zscore_vs_baseline, is_wire, is_foreign, is_offhours, is_weekend, geo_drift_km, new_device, untrusted_device, device_count_30d, vpn_flag, tor_flag, impossible_travel, sim_swap, mfa_fatigue, malware_beacon, phishing_recent, credential_stuffing_count, tx_velocity_1h, tx_velocity_24h, structuring_score, dormant_days, merchant_novelty, quantum_hndl_exposure.
 
-6. **AI Models & APIs** — Table/grid of cards:
-   - `google/gemini-2.5-flash` — narrative synthesis, copilot Q&A
-   - Deterministic correlation core (in-house, `correlation-core.server.ts`) — weighted signals + combo escalators
-   - Behavioral baseline model — 90-day rolling z-score on amount / hour / merchant
-   - Post-quantum scorer — TLS + key-lifetime HNDL exposure
-   - Data APIs: Supabase PostgREST + Realtime, OpenStreetMap tiles for threat map
-   Each card shows purpose, inputs, outputs, latency.
+## 3. TS inference on the edge
 
-7. **Metrics** — GlassCard band with the actual test-suite numbers from this project:
-   - **40/40** accuracy tests passing
-   - **100%** within-1-band accuracy
-   - **0%** false-positive rate on normal traffic
-   - **0** missed blocks on high-risk chains
-   - **94ms** median decision latency
-   - **21** labeled fraud/cyber scenarios in eval corpus
-   Plus a small note: numbers come from `tests/correlation-accuracy.test.ts` and the correlation engine benchmark.
+New `src/lib/ml/rf-infer.server.ts`:
+- Loads `rf-model.json` once (import-time constant).
+- `buildFeatures(tx, ctx)` — mirrors `ml/features.py`, unit-tested against a snapshot.
+- `rfProbability(features): number` — pure tree traversal, ~2ms for 400 trees, safe in Cloudflare Workers.
 
-8. **Scalability** — 3 cards: stateless server functions on edge Workers, Postgres partitioning-ready schema + indices on `(customer_id, created_at desc)`, Realtime fan-out via Supabase channels.
+## 4. Hybrid scoring (blend, not replace)
 
-9. **Security & Compliance** — 3 cards + compliance pill row (SOC 2 Type II, ISO 27001, PCI DSS 4.0, PSD2 SCA, DORA, NIST CSF 2.0): RLS per role, real TOTP MFA via Supabase, PII minimisation + no external model retention.
+In `src/lib/correlation-core.server.ts`, extend `scoreOnly`:
 
-10. **Business Impact** — 4 KPI tiles: fraud prevented, analyst hours saved / week, MTTD reduction, coverage vs legacy SIEM-only stack.
+1. Run existing typed signals + combos → `rulesScore`, `hardBlock` flag, `contributors[]`.
+2. Build features, call `rfProbability` → `rfProb` (0..1), map to `rfScore = round(rfProb * 100)`.
+3. `composite = hardBlock ? max(85, rulesScore) : round(0.55 * rulesScore + 0.45 * rfScore)`.
+4. Never downgrade a hard block. Escalators (SIM swap, full kill chain, Tor+wire) still force Block.
+5. Add `rf_probability`, `rf_top_features` (top 5 by contribution via per-tree path attribution) to `risk_breakdown` JSON.
 
-11. **Closing CTA** — Reuse landing CTA block ("See correlation live" → demo console + Sign in).
+Bands stay 0–29 / 30–49 / 50–69 / 70–84 / 85–100.
 
-## Visual/UX rules
-- Reuse `Logo`, `GlassCard`, `bg-aurora`, `bg-grid`, `text-gradient-cyber`, `hairline`, `glass` utilities — do NOT introduce new colors.
-- lucide-react icons already in use.
-- Framer-motion fade-up on section entry (same pattern as landing).
-- Section spacing `py-20`, container `max-w-7xl mx-auto px-4 sm:px-6 md:px-10`.
-- Fully responsive: single column on mobile, 2–3 columns md+, no horizontal overflow.
-- No new dependencies, no backend changes, no schema changes.
+## 5. Explanations + UI
 
-## Non-goals
-- No new server functions, no DB migrations, no auth changes.
-- Metrics are presentational (sourced from existing test output); no live queries added on this page.
+- `ingest.functions.ts` narrative prompt now includes RF probability, calibrated confidence, and top RF feature contributions alongside rule contributors — Gemini already renders these.
+- `src/routes/_app.explainable-ai.tsx` — new "Model Signals" card showing RF probability bar + top-5 feature contributions per investigation.
+- `src/routes/about.tsx` — new "Model Performance" section rendered from `rf-metrics.json`: ROC-AUC, PR-AUC, confusion matrix (SVG), per-band accuracy, top-15 feature importances (bar chart). Add a short "Trained on PaySim + IEEE-CIS, ~1.2M rows, calibrated Random Forest, 400 trees" caption.
 
-## Files touched
-- Add: `src/routes/about.tsx`
-- Edit: `src/routes/index.tsx` (add "About" link in header nav + footer)
+## 6. Regression tests
+
+Extend `tests/correlation-accuracy.test.ts`:
+- Keep all 21 existing cases → must still meet ≥95% within-1-band, 0 missed blocks, ≤2% FPR.
+- Add 30 harder cases mined from PaySim edge patterns (cash-out chains, merchant collusion, dormant reactivation).
+- New `tests/rf-inference.test.ts` — asserts TS tree traversal matches Python predictions on 200 held-out rows (loaded from `src/lib/ml/rf-parity.json`) within 1e-6.
+
+## 7. Deliverables checklist
+
+- [ ] `ml/` training pipeline + README
+- [ ] `src/lib/ml/rf-model.json`, `rf-metrics.json`, `rf-parity.json`
+- [ ] `src/lib/ml/rf-infer.server.ts`
+- [ ] Updated `correlation-core.server.ts` with hybrid blend + hard-block guard
+- [ ] Extended narrative + XAI card
+- [ ] About page "Model Performance" section
+- [ ] Test suite: ≥95% within-1-band, 0 missed blocks, <2% FPR, parity test passes
+
+## Technical notes
+
+- No Python runs on Cloudflare Workers. Model is a JSON of tree arrays; TS inference is a plain loop, no deps.
+- Model file target size: ≤600 KB gzipped (prune trees, quantize thresholds to float32).
+- If PaySim download is blocked in the sandbox, the script falls back to a deterministic synthetic generator seeded from our 20+ demo presets so retraining always works.
+- Rules still own hard blocks — RF only shifts scores inside the gray zone. This preserves auditability that regulated banks require.
