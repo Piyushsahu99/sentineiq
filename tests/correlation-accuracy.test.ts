@@ -76,7 +76,7 @@ const CASES: Case[] = [
     build: () => ({ tx: tx({ amount: 6000, channel: "wire", country: "RU" }), ctx: {
       cust: cust(), telem: [cyber("Phishing credential harvest confirmed", "high", -25)],
     } }) },
-  { name: "credential stuffing + card", category: "high", expected_band: "High Risk",
+  { name: "credential stuffing + card", category: "high", expected_band: "Pending Review",
     build: () => ({ tx: tx({ amount: 5500 }), ctx: {
       cust: cust(), telem: [
         cyber("Credential stuffing failed login", "medium", -30),
