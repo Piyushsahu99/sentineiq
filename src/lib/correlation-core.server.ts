@@ -423,11 +423,12 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   const ids = new Set(adjustedSignals.map((s) => s.id));
   const forceBlock = ids.has("cyber.sim_swap") || ids.has("cyber.malware_beacon") || escalations.some((e) => e.id === "combo.full_kill_chain");
 
-  // Blend: 55% rules + 45% RF unless a hard rule fires
+  // Blend: RF can only escalate — never reduce — a rule score.
+  // Banks require rule outputs to hold as a floor for auditability.
   let composite: number;
   if (forceBlock) composite = Math.max(88, rulesScore);
   else if (escalations.some((e) => e.id === "combo.full_kill_chain")) composite = Math.max(90, rulesScore);
-  else composite = Math.round(0.55 * rulesScore + 0.45 * rfScore);
+  else composite = Math.max(rulesScore, Math.round(0.55 * rulesScore + 0.45 * rfScore));
 
   composite = Math.min(100, Math.max(0, composite));
 
