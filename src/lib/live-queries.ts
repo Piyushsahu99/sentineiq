@@ -90,11 +90,70 @@ export function useLatestInvestigation() {
   });
 }
 
-export function useTelemetry() {
+export function useTelemetry(limit = 100) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const ch = supabase.channel("telem-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cyber_telemetry" }, () => {
+        qc.invalidateQueries({ queryKey: ["telemetry"] });
+      }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
   return useQuery({
-    queryKey: ["telemetry"],
+    queryKey: ["telemetry", limit],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cyber_telemetry").select("*").order("created_at", { ascending: false }).limit(50);
+      const { data, error } = await supabase.from("cyber_telemetry").select("*").order("created_at", { ascending: false }).limit(limit);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useKnowledgeEdges(limit = 250) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const ch = supabase.channel("kg-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "knowledge_edges" }, () => {
+        qc.invalidateQueries({ queryKey: ["knowledge-edges"] });
+      }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
+  return useQuery({
+    queryKey: ["knowledge-edges", limit],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("knowledge_edges")
+        .select("src_type, src_id, dst_type, dst_id, weight, created_at")
+        .order("created_at", { ascending: false }).limit(limit);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useCustomers() {
+  return useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useIocs() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const ch = supabase.channel("ioc-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "knowledge_edges" }, () => {
+        qc.invalidateQueries({ queryKey: ["iocs"] });
+      }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
+  return useQuery({
+    queryKey: ["iocs"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("iocs").select("*").order("last_seen", { ascending: false }).limit(50);
       if (error) throw error;
       return data ?? [];
     },
