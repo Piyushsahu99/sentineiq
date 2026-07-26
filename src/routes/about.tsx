@@ -63,6 +63,7 @@ function About() {
           <Link to="/" hash="platform" className="hover:text-foreground transition">Platform</Link>
           <Link to="/" hash="modules" className="hover:text-foreground transition">Modules</Link>
           <Link to="/about" className="text-foreground">About</Link>
+          <Link to="/about" hash="deck" className="hover:text-foreground transition">Deck</Link>
           <Link to="/" hash="faq" className="hover:text-foreground transition">FAQ</Link>
         </nav>
         <div className="flex items-center gap-2 shrink-0">
