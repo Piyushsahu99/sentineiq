@@ -675,5 +675,71 @@ export async function scoreAndPersist(supabaseAdmin: any, txId: string): Promise
     }
   }
 
+  // Persist to the Knowledge Graph — best-effort, never blocks scoring.
+  try { await writeKnowledgeEdges(supabaseAdmin, tx, ctx, result, investigationId); }
+  catch (e) { console.warn("knowledge_edges write failed:", (e as Error).message); }
+
   return { ...result, investigation_id: investigationId };
 }
+
+// ---------- knowledge graph writer ----------
+// Turns every ingested tx + its correlated entities into edges so /graph,
+// /threat-intel, /behavior and /telemetry all render the same fresh state.
+export async function writeKnowledgeEdges(
+  supabaseAdmin: any, tx: any, ctx: Awaited<ReturnType<typeof loadContext>>,
+  result: ScoreResult, investigationId: string | null,
+) {
+  const edges: Array<{ src_type: string; src_id: string; dst_type: string; dst_id: string; weight: number }> = [];
+  const add = (st: string, si: string | null | undefined, dt: string, di: string | null | undefined, w = 1) => {
+    if (!si || !di) return;
+    edges.push({ src_type: st, src_id: String(si), dst_type: dt, dst_id: String(di), weight: w });
+  };
+
+  // Core: customer → transaction → merchant/country/beneficiary
+  add("Customer", tx.customer_id, "Transaction", tx.id, Math.max(1, Math.round(result.composite / 10)));
+  if (tx.merchant) add("Transaction", tx.id, "Merchant", `merchant:${String(tx.merchant).toLowerCase()}`);
+  if (tx.country) add("Transaction", tx.id, "Country", `country:${tx.country}`);
+  if (tx.beneficiary_id) add("Transaction", tx.id, "Beneficiary", tx.beneficiary_id);
+  if (tx.device_id) add("Customer", tx.customer_id, "Device", tx.device_id);
+  if (tx.session_id) add("Transaction", tx.id, "Session", tx.session_id);
+
+  // Devices + sessions
+  for (const d of ctx.devices.slice(0, 8)) add("Customer", tx.customer_id, "Device", d.id, d.trusted ? 1 : 3);
+  for (const s of ctx.sessions.slice(0, 5)) {
+    add("Customer", tx.customer_id, "Session", s.id);
+    if (s.ip) add("Session", s.id, "IP", `ip:${String(s.ip)}`);
+    if (s.country) add("Session", s.id, "Country", `country:${s.country}`);
+  }
+
+  // Cyber telemetry (customer-scoped) → customer, + IOC matches
+  const mine = ctx.telem.filter((t: any) => t.metadata?.customer_id === tx.customer_id).slice(0, 12);
+  for (const t of mine) {
+    add("CyberEvent", t.id, "Customer", tx.customer_id, t.severity === "critical" ? 4 : t.severity === "high" ? 3 : 1);
+    if (t.ip) add("CyberEvent", t.id, "IP", `ip:${String(t.ip)}`);
+    if (t.device) add("CyberEvent", t.id, "Device", `device:${String(t.device).toLowerCase()}`);
+  }
+  const custIps = new Set<string>();
+  for (const s of ctx.sessions) if (s.ip) custIps.add(String(s.ip));
+  for (const t of mine) if (t.ip) custIps.add(String(t.ip));
+  for (const i of ctx.iocs) {
+    if ((i.type ?? "").toLowerCase() === "ip" && custIps.has(String(i.value))) {
+      add("IOC", i.id, "Customer", tx.customer_id, 5);
+      add("IOC", i.id, "IP", `ip:${String(i.value)}`);
+    }
+  }
+
+  // Signals → transaction (evidence linkage for graph traversal)
+  for (const sig of result.signals.slice(0, 12)) {
+    add("Signal", sig.id, "Transaction", tx.id, Math.max(1, Math.round(sig.weight / 3)));
+  }
+
+  // Investigation hub
+  if (investigationId) {
+    add("Investigation", investigationId, "Transaction", tx.id, 5);
+    add("Investigation", investigationId, "Customer", tx.customer_id, 5);
+    for (const sig of result.signals.slice(0, 8)) add("Investigation", investigationId, "Signal", sig.id, 2);
+  }
+
+  if (edges.length) await supabaseAdmin.from("knowledge_edges").insert(edges);
+}
+
