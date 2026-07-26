@@ -314,6 +314,65 @@ export function runRules(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>):
     evidence: [{ source: "quantum_assets", ref_id: weakTls.id, note: `${weakTls.asset} · ${weakTls.algo}` }],
   });
 
+  // ---------- AGGREGATED FEATURES (customer history rollups) ----------
+  const agg = aggregateFeatures(tx, ctx);
+
+  // Geo diversity — hopping across countries in a short window is a strong ATO / money-mule signal
+  if (agg.unique_countries_7d >= 3) push({
+    id: "fraud.geo_diversity", kind: "fraud",
+    name: `Geo diversity: ${agg.unique_countries_7d} countries in last 7 days`,
+    weight: 8 + Math.min(6, agg.unique_countries_7d), confidence: 80,
+    evidence: [{ source: "transactions", note: `countries=${agg.countries_7d.join(",")}` }],
+  });
+
+  // Device churn — many distinct devices seen recently
+  if (agg.unique_devices_7d >= 3) push({
+    id: "fraud.device_churn", kind: "fraud",
+    name: `Device churn: ${agg.unique_devices_7d} distinct devices in 7d`,
+    weight: 6 + Math.min(6, agg.unique_devices_7d), confidence: 74,
+    evidence: [{ source: "devices", note: `distinct=${agg.unique_devices_7d}` }],
+  });
+
+  // Channel switch — customer normally card-only, now wire/crypto
+  if (agg.channel_switch && (tx.channel === "wire" || tx.channel === "crypto" || tx.channel === "swift")) push({
+    id: "fraud.channel_switch", kind: "fraud",
+    name: `Channel switch: never used ${tx.channel} in last 90d`,
+    weight: 10, confidence: 78,
+    evidence: [{ source: "transactions", note: `prior channels=${agg.prior_channels.join(",") || "none"}` }],
+  });
+
+  // Night-hour pattern — most recent activity concentrated in 00–05 UTC
+  if (agg.night_ratio_20 >= 0.6 && agg.recent_count >= 5) push({
+    id: "fraud.night_pattern", kind: "fraud",
+    name: `Nocturnal pattern: ${Math.round(agg.night_ratio_20 * 100)}% of last ${agg.recent_count} tx at 00–05 UTC`,
+    weight: 6, confidence: 66,
+    evidence: [{ source: "transactions", note: `night_ratio=${agg.night_ratio_20.toFixed(2)}` }],
+  });
+
+  // Cyber event burst — customer flooded with cyber events in the last hour
+  if (agg.cyber_events_1h >= 5) push({
+    id: "cyber.event_burst", kind: "cyber",
+    name: `Cyber burst: ${agg.cyber_events_1h} events in last 60 min`,
+    weight: 10 + Math.min(6, agg.cyber_events_1h - 5), confidence: 82,
+    evidence: mine.slice(0, 3).map((t: any) => ({ source: t.source, ref_id: t.id, ts: t.created_at, note: t.message })),
+  });
+
+  // IOC ↔ session IP match
+  if (agg.ioc_ip_hits.length > 0) push({
+    id: "xcorr.ioc_ip_match", kind: "xcorr",
+    name: `IOC IP match on customer session: ${agg.ioc_ip_hits[0]}`,
+    weight: 18, confidence: 92,
+    evidence: agg.ioc_ip_hits.slice(0, 3).map((ip) => ({ source: "iocs", note: `matched IP ${ip}` })),
+  });
+
+  // Merchant velocity — same merchant hit repeatedly in short window
+  if (agg.merchant_repeat_10min >= 3 && tx.merchant) push({
+    id: "fraud.merchant_hammer", kind: "fraud",
+    name: `Merchant hammer: ${agg.merchant_repeat_10min}× "${tx.merchant}" in 10 min`,
+    weight: 10, confidence: 80,
+    evidence: [{ source: "transactions", note: `merchant=${tx.merchant}` }],
+  });
+
   // Baseline nudge
   if (baseline > 40) push({
     id: "fraud.customer_baseline", kind: "fraud", name: `Elevated customer risk baseline (${baseline})`,
@@ -322,6 +381,57 @@ export function runRules(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>):
   });
 
   return signals;
+}
+
+// ---------- feature aggregation ----------
+// Rollups computed once from already-loaded context — no extra DB round-trips.
+export function aggregateFeatures(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>) {
+  const txTs = new Date(tx.created_at).getTime();
+  const day = 24 * 3600_000;
+  const within = (ms: number) => (t: any) => Math.abs(txTs - new Date(t.created_at ?? t.started_at).getTime()) <= ms;
+
+  const tx7 = ctx.recentTx.filter(within(7 * day));
+  const tx30 = ctx.recentTx.filter(within(30 * day));
+  const countries_7d = Array.from(new Set(tx7.map((t: any) => t.country).filter(Boolean))) as string[];
+  const merchants_30d = new Set(tx30.map((t: any) => (t.merchant ?? "").toLowerCase()).filter(Boolean));
+  const prior_channels = Array.from(new Set(ctx.recentTx.map((t: any) => t.channel).filter(Boolean))) as string[];
+  const channel_switch = tx.channel ? !prior_channels.includes(tx.channel) && ctx.recentTx.length >= 3 : false;
+
+  const last20 = ctx.recentTx.slice(0, 20);
+  const nightCount = last20.filter((t: any) => {
+    const h = new Date(t.created_at).getUTCHours();
+    return h < 5;
+  }).length;
+  const night_ratio_20 = last20.length ? nightCount / last20.length : 0;
+
+  const sessions7 = ctx.sessions.filter(within(7 * day));
+  const unique_devices_7d = new Set(sessions7.map((s: any) => s.device_id).filter(Boolean)).size
+    || ctx.devices.filter((d: any) => d.last_seen && new Date(d.last_seen).getTime() > txTs - 7 * day).length;
+
+  const mine = ctx.telem.filter((t: any) => t.metadata?.customer_id === tx.customer_id);
+  const cyber_events_1h = mine.filter((t: any) => txTs - new Date(t.created_at).getTime() <= 3600_000).length;
+
+  const custIps = new Set<string>();
+  for (const s of ctx.sessions) if (s.ip) custIps.add(String(s.ip));
+  for (const t of mine) if (t.ip) custIps.add(String(t.ip));
+  const ioc_ip_hits = ctx.iocs
+    .filter((i: any) => (i.type ?? "").toLowerCase() === "ip" && custIps.has(String(i.value)))
+    .map((i: any) => String(i.value));
+
+  const merchant_repeat_10min = tx.merchant
+    ? ctx.recentTx.filter((t: any) => (t.merchant ?? "").toLowerCase() === String(tx.merchant).toLowerCase()
+        && Math.abs(txTs - new Date(t.created_at).getTime()) < 10 * 60_000).length
+    : 0;
+
+  return {
+    tx_count_7d: tx7.length, tx_count_30d: tx30.length,
+    unique_countries_7d: countries_7d.length, countries_7d,
+    unique_merchants_30d: merchants_30d.size,
+    prior_channels, channel_switch,
+    unique_devices_7d,
+    night_ratio_20, recent_count: last20.length,
+    cyber_events_1h, ioc_ip_hits, merchant_repeat_10min,
+  };
 }
 
 // ---------- suppressions ----------
