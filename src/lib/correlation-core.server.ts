@@ -362,7 +362,7 @@ export function runRules(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>):
     id: "xcorr.ioc_ip_match", kind: "xcorr",
     name: `IOC IP match on customer session: ${agg.ioc_ip_hits[0]}`,
     weight: 18, confidence: 92,
-    evidence: agg.ioc_ip_hits.slice(0, 3).map((ip) => ({ source: "iocs", note: `matched IP ${ip}` })),
+    evidence: agg.ioc_ip_hits.slice(0, 3).map((ip: string) => ({ source: "iocs", note: `matched IP ${ip}` })),
   });
 
   // Merchant velocity — same merchant hit repeatedly in short window
