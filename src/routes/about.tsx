@@ -93,6 +93,38 @@ function About() {
         </motion.div>
       </section>
 
+      {/* Pitch Deck */}
+      <Section id="deck" kicker="00 · Pitch deck" title="Present SentinelQ to the jury.">
+        <GlassCard className="p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-lg grid place-items-center bg-gradient-to-br from-cyan-400/20 to-violet-500/20 hairline shrink-0">
+                <Presentation className="h-4 w-4 text-cyan-300" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">SentinelQ-AI.pptx</div>
+                <div className="text-[10px] font-mono text-muted-foreground">Evaluator deck · click through slides below</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <a href={DECK_EMBED} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-2 rounded-lg hairline hover:bg-white/6 text-muted-foreground hover:text-foreground">Open fullscreen</a>
+              <a href={deckAsset.url} download className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 text-black font-semibold hover:brightness-110">
+                <Download className="h-3.5 w-3.5" /> Download
+              </a>
+            </div>
+          </div>
+          <div className="relative w-full rounded-xl overflow-hidden hairline bg-black/40" style={{ aspectRatio: "16 / 9" }}>
+            <iframe
+              src={DECK_EMBED}
+              title="SentinelQ pitch deck"
+              className="absolute inset-0 w-full h-full"
+              frameBorder={0}
+              allowFullScreen
+            />
+          </div>
+        </GlassCard>
+      </Section>
+
       {/* Problem */}
       <Section id="problem" kicker="01 · The problem" title="Banks fight fraud and cyber threats in silos.">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
