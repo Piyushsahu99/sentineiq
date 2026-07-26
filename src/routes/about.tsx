@@ -9,7 +9,12 @@ import {
   Database, Cpu, GitBranch, LineChart, Users, Server, Cloud,
   ArrowRight, CheckCircle2, Sparkles, AlertTriangle, Gauge, Globe2,
   FileBarChart2, Workflow, Boxes, ShieldCheck, Radar, KeyRound,
+  Presentation, Download,
 } from "lucide-react";
+import deckAsset from "@/assets/SentinelQ-AI.pptx.asset.json";
+
+const DECK_URL = `https://sentinel-q.today${deckAsset.url}`;
+const DECK_EMBED = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(DECK_URL)}`;
 
 export const Route = createFileRoute("/about")({
   ssr: false,
