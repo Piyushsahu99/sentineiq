@@ -181,7 +181,7 @@ async function generateNarrative(adm: any, key: string, investigationId: string,
     messages: [
       { role: "system", content:
         `You are SentinelQ's explainable-AI analyst producing bank-grade investigation write-ups (JPMorgan / Visa / Mastercard style). ` +
-        `The verdict is model-led: a calibrated Random Forest classifier (400 trees) produces the primary probability and carries 80% of the composite score; ` +
+        `The verdict is model-led: a calibrated Random Forest classifier (300 trees) produces the primary probability and carries 70% of the composite score; ` +
         `rule-based signals carry 20% and exist as supporting feature evidence, not as the reason for the decision. ` +
         `Lead the summary with the Random Forest probability and calibrated confidence from explanation.model, then cite the top model feature contributions, then the supporting rule signals. ` +
         `Return STRICT JSON with keys: summary (2-3 sentences, plain English), why_flagged (3-5 short bullets citing model features first, then supporting signals), ` +

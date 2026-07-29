@@ -245,7 +245,7 @@ function About() {
       <Section id="models" kicker="05 · Models & APIs" title="What's under the hood.">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { icon: LineChart, name: "Random Forest (primary decider)", role: "Calibrated 300-tree classifier — owns 80% of every composite score", io: "24-feature vector → fraud probability + feature contributions", latency: "~3ms p50" },
+            { icon: LineChart, name: "Random Forest (primary decider)", role: "Calibrated 300-tree classifier — owns 70% of every composite score", io: "24-feature vector → fraud probability + feature contributions", latency: "~3ms p50" },
             { icon: Brain, name: "google/gemini-2.5-flash", role: "Narrative synthesis + Copilot Q&A", io: "model output + risk breakdown → analyst-grade narrative", latency: "~1.2s p50" },
             { icon: GitBranch, name: "Rule signal layer (in-house)", role: "Supporting explainability signals — 20% of the composite, no hard blocks", io: "signals + context → typed contributions with evidence", latency: "~94ms p50" },
 
@@ -274,9 +274,9 @@ function About() {
         <GlassCard className="p-5 md:p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { k: "0.975", v: "Random Forest ROC-AUC" },
+              { k: "0.950", v: "Random Forest ROC-AUC" },
               { k: "0.911", v: "PR-AUC (imbalanced)" },
-              { k: "92.8%", v: "Held-out accuracy" },
+              { k: "90.2%", v: "Held-out accuracy" },
               { k: "3.1%", v: "False-positive rate" },
               { k: "40k", v: "Training + test rows" },
               { k: "94ms", v: "Median decision latency" },
@@ -288,7 +288,7 @@ function About() {
             ))}
           </div>
           <p className="mt-4 text-xs text-muted-foreground leading-relaxed">
-            The Random Forest is the primary decider and carries <span className="text-cyan-300">80%</span> of every composite score.
+            The Random Forest is the primary decider and carries <span className="text-cyan-300">70%</span> of every composite score.
             Rule-based signals contribute the remaining <span className="text-cyan-300">20%</span> and exist to give analysts human-readable,
             evidence-cited explanations. There are no deterministic hard-block overrides — the model owns the verdict end to end.
           </p>

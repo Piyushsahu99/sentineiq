@@ -102,7 +102,7 @@ function XAIPage() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Calibrated confidence</div>
             <div className="text-2xl font-mono">{calibrated}%</div>
             <div className="text-[11px] text-muted-foreground mt-1">
-              RF-led engine · 80% model / 20% rules · {explanation?.signals.length ?? 0} signals · dominant: {explanation?.dominant_kind ?? "—"}
+              RF-led engine · 70% model / 30% rules · {explanation?.signals.length ?? 0} signals · dominant: {explanation?.dominant_kind ?? "—"}
             </div>
             {explanation?.suppressed?.length ? (
               <div className="text-[10px] text-amber-300 mt-1">↓ {explanation.suppressed.length} signal(s) suppressed by analyst feedback</div>
