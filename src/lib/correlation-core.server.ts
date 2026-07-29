@@ -561,7 +561,7 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   // be scored all the way down to "Approved" by a confident model.
   const RF_WEIGHT = 0.7;
   const RULES_WEIGHT = 0.3;
-  const RULES_FLOOR = 0.75;
+  const RULES_FLOOR = 0.8;
   let composite = Math.round(RF_WEIGHT * rfScore + RULES_WEIGHT * rulesScore);
   composite = Math.max(composite, Math.round(RULES_FLOOR * rulesScore));
   composite = Math.min(100, Math.max(0, composite));
