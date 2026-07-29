@@ -31,10 +31,13 @@ Mirrored in `src/lib/ml/rf-features.server.ts`.
 `correlation-core.server.ts` combines rule score + RF probability:
 
 ```
-composite = hardBlock ? max(88, rulesScore)
-                      : round(0.55 * rulesScore + 0.45 * rfScore)
+composite = max(round(0.7 * rfDecisionScore + 0.3 * rulesScore),
+                round(0.8 * rulesScore))
 ```
 
-Hard-block signals (SIM swap, malware C2, full kill chain) still force
-`Block` regardless of RF probability — RF only shifts scores in the gray
-zone. This preserves auditability for regulated banks.
+The Random Forest is the primary decider (70%). `rfDecisionScore` is a
+monotone curve that maps the calibrated probability onto the 0-100 band
+scale. Rule signals contribute 30% plus a soft review floor, so strong
+analyst-facing evidence can never be scored all the way down to `Approved`
+by a confident model — that keeps the decision auditable for regulated
+banks without deterministic hard blocks.

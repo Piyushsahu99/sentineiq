@@ -27,7 +27,11 @@ export function buildFeatures(tx: any, ctx: PureContext): Float32Array {
   const telem = ctx.telem ?? [];
   const devices = ctx.devices ?? [];
 
-  const mine = telem.filter((t: any) => t.metadata?.customer_id === tx.customer_id);
+  // Prefer telemetry explicitly tagged to this customer; if none is tagged,
+  // the context is already customer-scoped by loadContext, so use all of it.
+  // (Without this fallback the model is blind to every cyber flag.)
+  const tagged = telem.filter((t: any) => t.metadata?.customer_id === tx.customer_id);
+  const mine = tagged.length ? tagged : telem;
   const msgs = mine.map((t: any) => (t.message ?? "").toLowerCase());
   const hit = (re: RegExp) => msgs.some((m: string) => re.test(m)) ? 1 : 0;
 
@@ -52,8 +56,8 @@ export function buildFeatures(tx: any, ctx: PureContext): Float32Array {
   // 5 is_weekend
   const dow = dt.getUTCDay();
   f[5] = dow === 0 || dow === 6 ? 1 : 0;
-  // 6 geo_drift proxy (USD amount if foreign, else 0 — no real km data)
-  f[6] = f[3] === 1 ? usdAmt : 0;
+  // 6 geo_drift: km proxy for cross-border distance (independent of amount)
+  f[6] = f[3] === 1 ? (isHighRiskGeo(tx.country) ? 9000 : 4000) : 0;
   // 7 new_device
   const dayAgo = Date.now() - 24 * 3600_000;
   f[7] = devices.some((d: any) => !d.trusted || (d.last_seen && new Date(d.last_seen).getTime() > dayAgo)) ? 1 : 0;

@@ -1,70 +1,34 @@
+# RF-dominant correlation engine
 
-# Random Forest upgrade for SentinelQ correlation engine
+Shift the correlation engine from rules-first to Random Forest-first. Rules stay only as feature contributors and explainability aids — they no longer gate the verdict, and hard blocks are removed per your call.
 
-Goal: raise output quality to a level a real bank (Bank of Maharashtra) would accept. Keep the current rules engine (it guarantees hard blocks and explainability), add a trained Random Forest for the ambiguous middle band, and show the accuracy story on the About page.
+## Changes
 
-## 1. Offline training pipeline (Python, not shipped to runtime)
+### 1. `src/lib/correlation-core.server.ts` — rewrite scoring block
+- Keep signal detection (rules) intact — they still populate `contributors[]` and `evidence` so the UI stays explainable.
+- Replace the blend:
+  - Old: `composite = hardBlock ? max(88, rulesScore) : round(0.55*rules + 0.45*rf)`
+  - New: `composite = round(0.80 * rfScore + 0.20 * rulesScore)` (RF-dominant, matches your 80/20 choice)
+- Remove `hardBlock` short-circuit and the escalator overrides (SIM swap / kill chain / Tor+wire no longer force Block on their own — RF decides).
+- Band still derived from `composite` using the existing 0–29 / 30–49 / 50–69 / 70–84 / 85–100 thresholds.
+- `risk_breakdown` JSON: keep `rf_probability`, `rf_top_features`, `rules_score`, drop `hard_block` flag; add `weights: { rf: 0.8, rules: 0.2 }` so audits can see the mix.
 
-New folder `ml/` at repo root:
+### 2. `src/lib/ingest.functions.ts` — narrative prompt
+- Reword the Gemini prompt: lead with "Random Forest classifier scored this X%, calibrated confidence Y%". Rule contributors are described as "supporting feature signals", not "the reason for the block".
 
-- `ml/train_rf.py` — scikit-learn `RandomForestClassifier` (400 trees, `max_depth=12`, `class_weight="balanced"`, calibrated with `CalibratedClassifierCV` for real probabilities).
-- `ml/datasets/` — download + adapter scripts for PaySim (Kaggle mirror, no auth) and IEEE-CIS subset. Both mapped into our feature schema.
-- `ml/features.py` — single source of truth mapping raw tx + telemetry → feature vector; mirrored 1:1 in TS.
-- `ml/export_model.py` — dumps a compact `model.json` (arrays of trees: split feature, threshold, left, right, value) + `metrics.json` (ROC/AUC, PR-AUC, confusion matrix, per-band accuracy, feature importances).
-- `ml/README.md` — one-command retrain: `python ml/train_rf.py && python ml/export_model.py`.
+### 3. `src/routes/about.tsx` — Model Performance section
+- Update copy: "Random Forest is the primary decider (80% weight). Rule-based signals contribute 20% and provide human-readable explanations." Remove any "hard-block guarantee" language.
 
-Outputs committed to repo: `src/lib/ml/rf-model.json`, `src/lib/ml/rf-metrics.json`. No Python at runtime.
+### 4. `src/routes/_app.explainable-ai.tsx`
+- Reorder the investigation panel so the RF probability bar + top-5 features render first, rule contributors second.
 
-## 2. Feature vector (24 features)
+### 5. `tests/correlation-accuracy.test.ts`
+- Rebalance expectations: with rules only 20% of the score, some previously-hard-blocked cases will land in High Risk (70–84) instead of Block (85+). Update those case expectations. Keep the ≥95% within-1-band bar; drop the "0 missed blocks" assertion since deterministic blocks are gone (replace with "RF probability ≥ 0.8 → composite ≥ 70" sanity check).
 
-Numeric + boolean, all derivable from current `loadContext`:
-amount_log, amount_zscore_vs_baseline, is_wire, is_foreign, is_offhours, is_weekend, geo_drift_km, new_device, untrusted_device, device_count_30d, vpn_flag, tor_flag, impossible_travel, sim_swap, mfa_fatigue, malware_beacon, phishing_recent, credential_stuffing_count, tx_velocity_1h, tx_velocity_24h, structuring_score, dormant_days, merchant_novelty, quantum_hndl_exposure.
-
-## 3. TS inference on the edge
-
-New `src/lib/ml/rf-infer.server.ts`:
-- Loads `rf-model.json` once (import-time constant).
-- `buildFeatures(tx, ctx)` — mirrors `ml/features.py`, unit-tested against a snapshot.
-- `rfProbability(features): number` — pure tree traversal, ~2ms for 400 trees, safe in Cloudflare Workers.
-
-## 4. Hybrid scoring (blend, not replace)
-
-In `src/lib/correlation-core.server.ts`, extend `scoreOnly`:
-
-1. Run existing typed signals + combos → `rulesScore`, `hardBlock` flag, `contributors[]`.
-2. Build features, call `rfProbability` → `rfProb` (0..1), map to `rfScore = round(rfProb * 100)`.
-3. `composite = hardBlock ? max(85, rulesScore) : round(0.55 * rulesScore + 0.45 * rfScore)`.
-4. Never downgrade a hard block. Escalators (SIM swap, full kill chain, Tor+wire) still force Block.
-5. Add `rf_probability`, `rf_top_features` (top 5 by contribution via per-tree path attribution) to `risk_breakdown` JSON.
-
-Bands stay 0–29 / 30–49 / 50–69 / 70–84 / 85–100.
-
-## 5. Explanations + UI
-
-- `ingest.functions.ts` narrative prompt now includes RF probability, calibrated confidence, and top RF feature contributions alongside rule contributors — Gemini already renders these.
-- `src/routes/_app.explainable-ai.tsx` — new "Model Signals" card showing RF probability bar + top-5 feature contributions per investigation.
-- `src/routes/about.tsx` — new "Model Performance" section rendered from `rf-metrics.json`: ROC-AUC, PR-AUC, confusion matrix (SVG), per-band accuracy, top-15 feature importances (bar chart). Add a short "Trained on PaySim + IEEE-CIS, ~1.2M rows, calibrated Random Forest, 400 trees" caption.
-
-## 6. Regression tests
-
-Extend `tests/correlation-accuracy.test.ts`:
-- Keep all 21 existing cases → must still meet ≥95% within-1-band, 0 missed blocks, ≤2% FPR.
-- Add 30 harder cases mined from PaySim edge patterns (cash-out chains, merchant collusion, dormant reactivation).
-- New `tests/rf-inference.test.ts` — asserts TS tree traversal matches Python predictions on 200 held-out rows (loaded from `src/lib/ml/rf-parity.json`) within 1e-6.
-
-## 7. Deliverables checklist
-
-- [ ] `ml/` training pipeline + README
-- [ ] `src/lib/ml/rf-model.json`, `rf-metrics.json`, `rf-parity.json`
-- [ ] `src/lib/ml/rf-infer.server.ts`
-- [ ] Updated `correlation-core.server.ts` with hybrid blend + hard-block guard
-- [ ] Extended narrative + XAI card
-- [ ] About page "Model Performance" section
-- [ ] Test suite: ≥95% within-1-band, 0 missed blocks, <2% FPR, parity test passes
+## Not doing
+- No retraining, no new model file, no LLM correlator (per your answers).
+- Signal detection code, knowledge-graph writes, and UI shells untouched.
 
 ## Technical notes
-
-- No Python runs on Cloudflare Workers. Model is a JSON of tree arrays; TS inference is a plain loop, no deps.
-- Model file target size: ≤600 KB gzipped (prune trees, quantize thresholds to float32).
-- If PaySim download is blocked in the sandbox, the script falls back to a deterministic synthetic generator seeded from our 20+ demo presets so retraining always works.
-- Rules still own hard blocks — RF only shifts scores inside the gray zone. This preserves auditability that regulated banks require.
+- Weight change is a two-line edit; the ripple is in tests and copy.
+- Removing hard blocks means a SIM-swap-only signal (rules ≈ 55, rf ≈ 0.3) will now score ~50 instead of forced 88. This is the tradeoff you approved.

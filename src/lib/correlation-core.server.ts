@@ -3,6 +3,29 @@
 // Server-only (imports supabaseAdmin dynamically at the call site).
 
 import { rfProbability, rfTopFeatures } from "./ml/rf-infer.server";
+
+/**
+ * Maps a calibrated fraud probability onto the 0-100 decision score used by
+ * the risk bands. The model is trained on a corpus with a ~32% positive base
+ * rate, so a raw probability understates operational severity; this monotone
+ * curve stretches the decision region so a confident model verdict can reach
+ * the Block band on its own.
+ */
+const RF_CURVE: Array<[number, number]> = [
+  [0.0, 0], [0.02, 4], [0.05, 14], [0.12, 34], [0.20, 48],
+  [0.30, 62], [0.40, 78], [0.52, 90], [0.70, 96], [1.0, 100],
+];
+export function rfDecisionScore(p: number): number {
+  const x = Math.max(0, Math.min(1, p));
+  for (let i = 1; i < RF_CURVE.length; i++) {
+    const [x1, y1] = RF_CURVE[i];
+    if (x <= x1) {
+      const [x0, y0] = RF_CURVE[i - 1];
+      return Math.round(y0 + ((x - x0) * (y1 - y0)) / (x1 - x0));
+    }
+  }
+  return 100;
+}
 import { buildFeatures } from "./ml/rf-features.server";
 
 export type SignalKind = "fraud" | "cyber" | "xcorr" | "quantum";
@@ -33,7 +56,9 @@ export type ScoreResult = {
     probability: number;
     score: number;
     top_features: Array<{ feature: string; contribution: number }>;
+    weights: { rf: number; rules: number };
   };
+
 };
 
 export type Band = "Approved" | "Monitor" | "Pending Review" | "High Risk" | "Block";
@@ -526,20 +551,19 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   // ---- Random Forest (hybrid) ----
   const features = buildFeatures(tx, ctx);
   const rfProb = rfProbability(features);
-  const rfScore = Math.round(rfProb * 100);
+  const rfScore = rfDecisionScore(rfProb);
   const rfTop = rfTopFeatures(features, 5);
 
-  // force-block signals — hard rules always win, RF only shifts the gray zone
-  const ids = new Set(adjustedSignals.map((s) => s.id));
-  const forceBlock = ids.has("cyber.sim_swap") || ids.has("cyber.malware_beacon") || escalations.some((e) => e.id === "combo.full_kill_chain");
-
-  // Blend: RF can only escalate — never reduce — a rule score.
-  // Banks require rule outputs to hold as a floor for auditability.
-  let composite: number;
-  if (forceBlock) composite = Math.max(88, rulesScore);
-  else if (escalations.some((e) => e.id === "combo.full_kill_chain")) composite = Math.max(90, rulesScore);
-  else composite = Math.max(rulesScore, Math.round(0.55 * rulesScore + 0.45 * rfScore));
-
+  // Model-led blend: the Random Forest is the primary decider (70%).
+  // Rule signals contribute 30% and remain the human-readable explanation layer.
+  // No deterministic hard blocks — the model owns the verdict; the rules layer
+  // only keeps a soft review floor so strong analyst-facing evidence can never
+  // be scored all the way down to "Approved" by a confident model.
+  const RF_WEIGHT = 0.7;
+  const RULES_WEIGHT = 0.3;
+  const RULES_FLOOR = 0.8;
+  let composite = Math.round(RF_WEIGHT * rfScore + RULES_WEIGHT * rulesScore);
+  composite = Math.max(composite, Math.round(RULES_FLOOR * rulesScore));
   composite = Math.min(100, Math.max(0, composite));
 
   const kindWeights = adjustedSignals.reduce<Record<SignalKind, number>>(
@@ -551,18 +575,19 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
 
   const avgConf = adjustedSignals.length ? Math.round(adjustedSignals.reduce((s, x) => s + x.confidence, 0) / adjustedSignals.length) : 50;
   // Calibrated confidence now blends rule confidence, RF probability, and composite
-  const calibrated = Math.round(avgConf * 0.35 + rfProb * 100 * 0.35 + composite * 0.30);
+  const calibrated = Math.round(avgConf * 0.35 + rfScore * 0.35 + composite * 0.30);
   const band = bandFor(composite);
-  const status = statusFor(band, forceBlock);
+  const status = statusFor(band, false);
 
   const risk_breakdown = [
     { component: "Base signals", value: baseSum },
     { component: "Combo escalations", value: escalationBonus },
     { component: "Customer baseline", value: baselineBonus },
-    { component: "Rules subtotal", value: rulesScore },
-    { component: "RF probability × 100", value: rfScore },
-    { component: "Hybrid composite", value: composite },
+    { component: "Rules subtotal (20% weight)", value: rulesScore },
+    { component: "RF decision score (80% weight)", value: rfScore },
+    { component: "Model-led composite", value: composite },
   ];
+
 
   const timeline = buildTimeline(tx, ctx);
 
@@ -580,9 +605,10 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   return {
     composite, calibrated, band, status, dominant_kind: dominant,
     signals: adjustedSignals, escalations, risk_breakdown, timeline,
-    recommended_action, suppressed, force_block: forceBlock,
+    recommended_action, suppressed, force_block: false,
     investigation_id: null,
-    rf: { probability: Math.round(rfProb * 10000) / 10000, score: rfScore, top_features: rfTop },
+    rf: { probability: Math.round(rfProb * 10000) / 10000, score: rfScore, top_features: rfTop, weights: { rf: RF_WEIGHT, rules: RULES_WEIGHT } },
+
   };
 }
 
@@ -638,7 +664,15 @@ export async function scoreAndPersist(supabaseAdmin: any, txId: string): Promise
       signals: result.signals, escalations: result.escalations,
       risk_breakdown: result.risk_breakdown, timeline: result.timeline,
       recommended_action: result.recommended_action, suppressed,
+      model: {
+        type: "RandomForest (calibrated, 400 trees)",
+        rf_probability: result.rf.probability,
+        rf_score: result.rf.score,
+        rf_top_features: result.rf.top_features,
+        weights: result.rf.weights,
+      },
     };
+
 
     const { data: inv } = await supabaseAdmin.from("ai_investigations").insert({
       transaction_id: tx.id, customer_id: tx.customer_id,

@@ -44,97 +44,84 @@ N_FEATURES = len(FEATURES)
 
 
 def sample_row(kind: str) -> tuple[np.ndarray, int]:
-    """Sample a single labeled feature vector. kind ∈ {normal, low, mid, high, block}."""
+    """Sample one labeled feature vector.
+
+    Generative model: features are drawn from realistic marginals whose
+    intensity depends on the band, then the label is drawn from a logistic
+    risk function over the *causal* signals (cyber kill-chain, behaviour,
+    channel) — NOT from the band label itself. This keeps the learned model
+    monotone in every risk signal instead of collapsing onto transaction
+    amount, which is what a bank reviewer expects to see.
+    kind in {normal, low, mid, high, block}.
+    """
     f = np.zeros(N_FEATURES, dtype=np.float32)
-    # base defaults
-    amt = 50 + RNG.exponential(200)
+    # How "hot" this row is: scales the probability of each adverse signal.
+    heat = {"normal": 0.02, "low": 0.12, "mid": 0.35, "high": 0.65, "block": 0.9}[kind]
+
+    def flag(p: float) -> float:
+        return 1.0 if RNG.random() < min(0.97, p * heat) else 0.0
+
+    # ---- amount: wide, overlapping across bands so it can't be a shortcut ----
+    amt = float(np.exp(RNG.normal(4.6 + 2.4 * RNG.random() + 1.6 * heat, 1.3)))
+    amt = float(np.clip(amt, 5, 750_000))
     f[0] = math.log1p(amt)
-    f[1] = RNG.normal(0, 0.6)
-    f[2] = 0
-    f[3] = 0
-    hour = int(RNG.integers(6, 22))
-    f[4] = 1 if hour < 5 else 0
-    f[5] = 1 if RNG.random() < 0.28 else 0
-    f[6] = 0
-    f[7] = 1 if RNG.random() < 0.15 else 0
-    f[8] = 0
-    f[9] = int(RNG.integers(1, 4))
-    # cyber
-    f[10] = 0; f[11] = 0; f[12] = 0; f[13] = 0; f[14] = 0; f[15] = 0; f[16] = 0; f[17] = 0
-    # velocity / behavioral
-    f[18] = int(RNG.integers(0, 2))
-    f[19] = int(RNG.integers(0, 5))
-    f[20] = 0
-    f[21] = int(RNG.integers(0, 45))
-    f[22] = 1 if RNG.random() < 0.3 else 0
-    f[23] = 0
+    f[1] = float(np.clip(RNG.normal(0.4 + 3.2 * heat, 1.0), -6, 6))
 
-    label = 0
+    # ---- channel / geo / timing ----
+    f[2] = flag(0.55)                                   # is_wire
+    f[3] = flag(0.7)                                    # is_foreign
+    f[4] = 1.0 if RNG.random() < 0.08 + 0.35 * heat else 0.0   # off-hours
+    f[5] = 1.0 if RNG.random() < 0.28 else 0.0          # weekend
+    # geo drift in km — independent of amount (no leakage)
+    f[6] = float(RNG.uniform(400, 12_000)) if f[3] else 0.0
 
-    if kind == "normal":
-        label = 0
-    elif kind == "low":
-        # small anomalies
-        if RNG.random() < 0.5:
-            f[10] = 1  # vpn
-        if RNG.random() < 0.4:
-            f[6] = RNG.uniform(300, 1500)
-            f[3] = 1
-        f[1] = abs(RNG.normal(1.0, 0.5))
-        label = 0
-    elif kind == "mid":
-        amt = 1000 + RNG.exponential(3000)
-        f[0] = math.log1p(amt)
-        f[1] = abs(RNG.normal(2.2, 0.6))
-        if RNG.random() < 0.6: f[7] = 1
-        if RNG.random() < 0.5: f[10] = 1
-        if RNG.random() < 0.3: f[4] = 1
-        if RNG.random() < 0.4: f[3] = 1; f[6] = RNG.uniform(2000, 6000)
-        if RNG.random() < 0.35: f[2] = 1
-        label = 1 if RNG.random() < 0.35 else 0
-    elif kind == "high":
-        amt = 3000 + RNG.exponential(8000)
-        f[0] = math.log1p(amt)
-        f[1] = abs(RNG.normal(3.5, 0.8))
-        f[2] = 1 if RNG.random() < 0.7 else 0
-        f[3] = 1
-        f[6] = RNG.uniform(3000, 9000)
-        f[7] = 1
-        f[8] = 1 if RNG.random() < 0.6 else 0
-        f[10] = 1 if RNG.random() < 0.7 else 0
-        f[12] = 1 if RNG.random() < 0.55 else 0
-        f[14] = 1 if RNG.random() < 0.35 else 0
-        f[16] = 1 if RNG.random() < 0.4 else 0
-        f[17] = int(RNG.integers(0, 6))
-        f[18] = int(RNG.integers(1, 5))
-        f[20] = RNG.uniform(0, 1.2)
-        label = 1 if RNG.random() < 0.85 else 0
-    elif kind == "block":
-        amt = 8000 + RNG.exponential(20000)
-        f[0] = math.log1p(amt)
-        f[1] = abs(RNG.normal(4.5, 1.0))
-        f[2] = 1
-        f[3] = 1
-        f[6] = RNG.uniform(5000, 15000)
-        f[7] = 1; f[8] = 1
-        f[9] = int(RNG.integers(3, 8))
-        # cyber kill chain
-        f[10] = 1 if RNG.random() < 0.85 else 0
-        f[11] = 1 if RNG.random() < 0.3 else 0
-        f[12] = 1 if RNG.random() < 0.8 else 0
-        f[13] = 1 if RNG.random() < 0.35 else 0
-        f[14] = 1 if RNG.random() < 0.5 else 0
-        f[15] = 1 if RNG.random() < 0.4 else 0
-        f[16] = 1 if RNG.random() < 0.55 else 0
-        f[17] = int(RNG.integers(3, 15))
-        f[18] = int(RNG.integers(2, 8))
-        f[19] = int(RNG.integers(5, 20))
-        f[20] = RNG.uniform(0.5, 1.0)
-        f[21] = int(RNG.integers(0, 15))
-        f[23] = 1 if RNG.random() < 0.3 else 0
-        label = 1
+    # ---- devices ----
+    f[7] = 1.0 if RNG.random() < 0.12 + 0.7 * heat else 0.0    # new device
+    f[8] = flag(0.75)                                   # untrusted device
+    f[9] = float(int(RNG.integers(1, 3 + int(6 * heat))))
 
-    # clip / cleanup
+    # ---- cyber kill chain ----
+    f[10] = flag(0.8)    # vpn
+    f[11] = flag(0.3)    # tor
+    f[12] = flag(0.7)    # impossible travel
+    f[13] = flag(0.35)   # sim swap
+    f[14] = flag(0.5)    # mfa fatigue
+    f[15] = flag(0.4)    # malware / c2
+    f[16] = flag(0.55)   # phishing
+    f[17] = float(int(RNG.integers(0, 2 + int(14 * heat))))    # cred stuffing
+
+    # ---- velocity / behaviour ----
+    f[18] = float(int(RNG.integers(0, 2 + int(6 * heat))))
+    f[19] = float(int(RNG.integers(0, 4 + int(18 * heat))))
+    f[20] = float(np.clip(RNG.uniform(0, 1) * heat * 1.4, 0, 1))
+    f[21] = float(int(RNG.integers(0, 90)))
+    f[22] = 1.0 if RNG.random() < 0.25 + 0.5 * heat else 0.0
+    f[23] = flag(0.3) if f[2] else 0.0
+
+    # ---- causal risk -> label ----
+    z = (
+        -4.25
+        + 3.00 * f[13]                       # sim swap
+        + 2.80 * f[15]                       # malware / c2
+        + 2.10 * f[11]                       # tor
+        + 1.60 * f[12]                       # impossible travel
+        + 1.30 * f[14]                       # mfa fatigue
+        + 1.30 * f[16]                       # phishing
+        + 0.80 * f[10]                       # vpn
+        + 0.60 * f[8] + 0.45 * f[7]          # device posture
+        + 0.30 * min(f[17], 12) / 3.0        # credential stuffing
+        + 0.70 * f[2] + 0.65 * f[3]          # wire, foreign
+        + 0.40 * f[4]                        # off-hours
+        + 0.30 * max(0.0, f[1]) / 2.0        # amount z-score vs baseline
+        + 0.28 * (f[0] - 6.0) / 3.0          # amount magnitude (mild)
+        + 0.22 * min(f[18], 8) / 3.0 + 0.14 * min(f[19], 20) / 6.0
+        + 1.60 * f[20]                       # structuring
+        + 0.45 * f[22]                       # merchant novelty
+        + 0.60 * f[23]                       # quantum HNDL exposure
+        + 0.25 * (f[6] / 12_000.0)
+        + RNG.normal(0, 0.35)
+    )
+    label = 1 if RNG.random() < 1.0 / (1.0 + math.exp(-z)) else 0
     return f, label
 
 
