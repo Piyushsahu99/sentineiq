@@ -554,12 +554,16 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
   const rfScore = rfDecisionScore(rfProb);
   const rfTop = rfTopFeatures(features, 5);
 
-  // RF-dominant blend: the Random Forest is the primary decider (80%).
-  // Rule signals contribute 20% and remain the human-readable explanation layer.
-  // No deterministic hard blocks — the model owns the verdict.
+  // Model-led blend: the Random Forest is the primary decider (70%).
+  // Rule signals contribute 30% and remain the human-readable explanation layer.
+  // No deterministic hard blocks — the model owns the verdict; the rules layer
+  // only keeps a soft review floor so strong analyst-facing evidence can never
+  // be scored all the way down to "Approved" by a confident model.
   const RF_WEIGHT = 0.7;
   const RULES_WEIGHT = 0.3;
+  const RULES_FLOOR = 0.6;
   let composite = Math.round(RF_WEIGHT * rfScore + RULES_WEIGHT * rulesScore);
+  composite = Math.max(composite, Math.round(RULES_FLOOR * rulesScore));
   composite = Math.min(100, Math.max(0, composite));
 
   const kindWeights = adjustedSignals.reduce<Record<SignalKind, number>>(
