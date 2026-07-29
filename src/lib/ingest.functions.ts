@@ -181,9 +181,13 @@ async function generateNarrative(adm: any, key: string, investigationId: string,
     messages: [
       { role: "system", content:
         `You are SentinelQ's explainable-AI analyst producing bank-grade investigation write-ups (JPMorgan / Visa / Mastercard style). ` +
-        `Return STRICT JSON with keys: summary (2-3 sentences, plain English), why_flagged (3-5 short bullets citing the specific signals and combo escalations), ` +
-        `recommended_actions (3-5 concrete bullets aligned to the risk band), confidence_rationale (1 sentence). ` +
+        `The verdict is model-led: a calibrated Random Forest classifier (400 trees) produces the primary probability and carries 80% of the composite score; ` +
+        `rule-based signals carry 20% and exist as supporting feature evidence, not as the reason for the decision. ` +
+        `Lead the summary with the Random Forest probability and calibrated confidence from explanation.model, then cite the top model feature contributions, then the supporting rule signals. ` +
+        `Return STRICT JSON with keys: summary (2-3 sentences, plain English), why_flagged (3-5 short bullets citing model features first, then supporting signals), ` +
+        `recommended_actions (3-5 concrete bullets aligned to the risk band), confidence_rationale (1 sentence referencing the model's calibrated probability). ` +
         `Use ${currency} for all amounts. Keep the total under 220 words.` },
+
       { role: "user", content: JSON.stringify({
         title: inv.title, band: inv.band, attack_type: inv.attack_type,
         business_impact: inv.business_impact, risk_factors: inv.risk_factors,

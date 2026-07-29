@@ -30,7 +30,15 @@ type Explanation = {
   kind_weights: Record<Signal["kind"], number>;
   dominant_kind: Signal["kind"];
   suppressed: string[];
+  model?: {
+    type?: string;
+    rf_probability?: number;
+    rf_score?: number;
+    rf_top_features?: Array<{ feature: string; contribution: number }>;
+    weights?: { rf: number; rules: number };
+  };
 };
+
 
 const KIND_META: Record<Signal["kind"], { label: string; icon: any; color: string }> = {
   fraud:   { label: "Fraud",         icon: DollarSign, color: "text-amber-300" },
@@ -79,7 +87,7 @@ function XAIPage() {
     <div>
       <PageHeader
         title="Explainable AI"
-        subtitle="Every decision is auditable: typed signals, evidence citations, calibrated confidence, and analyst feedback."
+        subtitle="Model-led decisions, fully auditable: Random Forest probability, feature contributions, supporting rule signals, and analyst feedback."
         actions={
           <select value={active?.id ?? ""} onChange={(e) => setSelectedId(e.target.value)} className="text-xs bg-white/5 hairline rounded-lg px-3 py-1.5 max-w-[420px]">
             {investigations.map((i) => (<option key={i.id} value={i.id}>{i.title}</option>))}
@@ -94,7 +102,7 @@ function XAIPage() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Calibrated confidence</div>
             <div className="text-2xl font-mono">{calibrated}%</div>
             <div className="text-[11px] text-muted-foreground mt-1">
-              rule pipeline v3 · {explanation?.signals.length ?? 0} signals · dominant: {explanation?.dominant_kind ?? "—"}
+              RF-led engine · 80% model / 20% rules · {explanation?.signals.length ?? 0} signals · dominant: {explanation?.dominant_kind ?? "—"}
             </div>
             {explanation?.suppressed?.length ? (
               <div className="text-[10px] text-amber-300 mt-1">↓ {explanation.suppressed.length} signal(s) suppressed by analyst feedback</div>
@@ -120,9 +128,52 @@ function XAIPage() {
         </GlassCard>
       </div>
 
+      <div className="grid grid-cols-12 gap-6 mb-6">
+        <GlassCard className="col-span-12">
+          <SectionHeader
+            title="Model signals — Random Forest (primary decider)"
+            description={`${Math.round((explanation?.model?.weights?.rf ?? 0.8) * 100)}% of the composite comes from the model · rule signals contribute ${Math.round((explanation?.model?.weights?.rules ?? 0.2) * 100)}%`}
+          />
+          {explanation?.model ? (
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-12 md:col-span-4">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Fraud probability</div>
+                <div className="text-3xl font-mono text-violet-300">{Math.round((explanation.model.rf_probability ?? 0) * 100)}%</div>
+                <div className="mt-2 h-2 w-full rounded-full bg-white/5 overflow-hidden">
+                  <div className="h-full rounded-full bg-violet-400/70" style={{ width: `${Math.round((explanation.model.rf_probability ?? 0) * 100)}%` }} />
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-2">{explanation.model.type ?? "RandomForest"}</div>
+              </div>
+              <div className="col-span-12 md:col-span-8">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Top feature contributions</div>
+                <div className="space-y-1.5">
+                  {(explanation.model.rf_top_features ?? []).map((f) => {
+                    const mag = Math.min(100, Math.abs(f.contribution) * 400);
+                    return (
+                      <div key={f.feature}>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-mono">{f.feature}</span>
+                          <span className={`font-mono ${f.contribution >= 0 ? "text-rose-300" : "text-emerald-300"}`}>{f.contribution >= 0 ? "+" : ""}{f.contribution}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
+                          <div className={`h-full rounded-full ${f.contribution >= 0 ? "bg-rose-400/70" : "bg-emerald-400/70"}`} style={{ width: `${mag}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!explanation.model.rf_top_features?.length && <div className="text-xs text-muted-foreground">No dominant feature contributions for this case.</div>}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">This investigation predates the model-led engine. Re-run the correlation to see Random Forest output.</div>
+          )}
+        </GlassCard>
+      </div>
+
       <div className="grid grid-cols-12 gap-6">
         <GlassCard className="col-span-12 lg:col-span-8">
-          <SectionHeader title="Signals" description="Typed contributions with evidence citations" />
+          <SectionHeader title="Supporting rule signals" description="Typed contributions with evidence citations · 20% of composite" />
           <div className="space-y-2">
             {(explanation?.signals ?? []).map((s) => {
               const Icon = KIND_META[s.kind].icon;

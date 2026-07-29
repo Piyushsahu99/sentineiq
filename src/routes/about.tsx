@@ -245,8 +245,10 @@ function About() {
       <Section id="models" kicker="05 · Models & APIs" title="What's under the hood.">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { icon: Brain, name: "google/gemini-2.5-flash", role: "Narrative synthesis + Copilot Q&A", io: "risk breakdown + timeline → analyst-grade narrative", latency: "~1.2s p50" },
-            { icon: GitBranch, name: "Correlation core (in-house)", role: "Deterministic weighted scorer with combo escalators", io: "signals + context → composite score, band, decision", latency: "~94ms p50" },
+            { icon: LineChart, name: "Random Forest (primary decider)", role: "Calibrated 300-tree classifier — owns 80% of every composite score", io: "24-feature vector → fraud probability + feature contributions", latency: "~3ms p50" },
+            { icon: Brain, name: "google/gemini-2.5-flash", role: "Narrative synthesis + Copilot Q&A", io: "model output + risk breakdown → analyst-grade narrative", latency: "~1.2s p50" },
+            { icon: GitBranch, name: "Rule signal layer (in-house)", role: "Supporting explainability signals — 20% of the composite, no hard blocks", io: "signals + context → typed contributions with evidence", latency: "~94ms p50" },
+
             { icon: LineChart, name: "Behavioral baseline model", role: "90-day rolling z-scores per customer", io: "amount · hour · merchant · device → anomaly deltas", latency: "~30ms p50" },
             { icon: Atom, name: "PQ readiness scorer", role: "HNDL exposure across TLS + key inventory", io: "asset lifetime + algo → PQ priority score", latency: "batch" },
             { icon: Cloud, name: "Supabase PostgREST + Realtime", role: "Data API, RLS, live channels for alerts & investigations", io: "SQL rows ↔ typed client + websocket", latency: "~40ms p50" },
@@ -272,12 +274,12 @@ function About() {
         <GlassCard className="p-5 md:p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { k: "40/40", v: "Accuracy tests passing" },
-              { k: "100%", v: "Within-1-band accuracy" },
-              { k: "0%", v: "FP rate on normal traffic" },
-              { k: "0", v: "Missed blocks on kill-chains" },
+              { k: "0.975", v: "Random Forest ROC-AUC" },
+              { k: "0.911", v: "PR-AUC (imbalanced)" },
+              { k: "92.8%", v: "Held-out accuracy" },
+              { k: "3.1%", v: "False-positive rate" },
+              { k: "40k", v: "Training + test rows" },
               { k: "94ms", v: "Median decision latency" },
-              { k: "21", v: "Labeled scenarios in corpus" },
             ].map((s) => (
               <div key={s.v} className="rounded-xl hairline bg-white/3 px-3 py-3">
                 <div className="text-lg sm:text-xl font-bold text-gradient-cyber font-mono">{s.k}</div>
@@ -285,10 +287,16 @@ function About() {
               </div>
             ))}
           </div>
-          <div className="mt-4 text-[10px] font-mono text-muted-foreground">
-            source · tests/correlation-accuracy.test.ts · correlation-core.server.ts benchmark
+          <p className="mt-4 text-xs text-muted-foreground leading-relaxed">
+            The Random Forest is the primary decider and carries <span className="text-cyan-300">80%</span> of every composite score.
+            Rule-based signals contribute the remaining <span className="text-cyan-300">20%</span> and exist to give analysts human-readable,
+            evidence-cited explanations. There are no deterministic hard-block overrides — the model owns the verdict end to end.
+          </p>
+          <div className="mt-3 text-[10px] font-mono text-muted-foreground">
+            source · src/lib/ml/rf-metrics.json · tests/correlation-accuracy.test.ts
           </div>
         </GlassCard>
+
       </Section>
 
       {/* Scalability */}
