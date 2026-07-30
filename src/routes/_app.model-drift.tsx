@@ -3,7 +3,7 @@ import { GlassCard, PageHeader, SectionHeader } from "@/components/sq/glass-card
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDriftReport, runDriftScan } from "@/lib/drift.functions";
-import { Activity, AlertTriangle, CheckCircle2, RefreshCw, Gauge } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -136,7 +136,7 @@ function DriftPage() {
           </div>
 
           <GlassCard className="p-4 sm:p-6">
-            <SectionHeader title="Per-feature drift" subtitle="PSI of each model input against its training distribution" icon={Gauge} />
+            <SectionHeader title="Per-feature drift" description="PSI of each model input against its training distribution" />
             <div className="mt-4 space-y-2">
               {data.features.map((f: any) => (
                 <div key={f.feature} className="flex items-center gap-3">
@@ -160,7 +160,7 @@ function DriftPage() {
           </GlassCard>
 
           <GlassCard className="p-4 sm:p-6">
-            <SectionHeader title="Scan history" subtitle="Persisted drift checks and retraining decisions" icon={Activity} />
+            <SectionHeader title="Scan history" description="Persisted drift checks and retraining decisions" />
             {data.history.length === 0 ? (
               <p className="mt-4 text-xs text-muted-foreground">No stored scans yet — run a drift scan to record one.</p>
             ) : (
