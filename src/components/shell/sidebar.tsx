@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, GitBranch, FileSearch2, Coins, Radar, Globe2, Atom, Users, Brain,
-  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield, Upload,
+  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield, Upload, Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/sq/logo";
@@ -28,6 +28,7 @@ const nav = [
     { to: "/quantum", label: "Quantum Risk", icon: Atom, badge: "PQC" },
     { to: "/explainable-ai", label: "Explainable AI", icon: Brain },
     { to: "/graph", label: "Knowledge Graph", icon: Network },
+    { to: "/model-drift", label: "Model Drift Monitor", icon: Activity },
   ]},
   { section: "Governance", items: [
     { to: "/reports", label: "Reports", icon: FileBarChart2 },
