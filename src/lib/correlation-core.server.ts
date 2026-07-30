@@ -645,6 +645,22 @@ export async function scoreAndPersist(supabaseAdmin: any, txId: string): Promise
     contributors: result.signals.map((s) => ({ name: s.name, weight: s.weight, kind: s.kind, id: s.id })),
   });
 
+  // Model-monitoring snapshot: feature vector + calibrated probability for
+  // every scored transaction, so drift can be measured against the training
+  // distribution. Best-effort — monitoring must never break scoring.
+  try {
+    await supabaseAdmin.from("model_feature_snapshots").insert({
+      transaction_id: tx.id,
+      customer_id: tx.customer_id,
+      features: Array.from(buildFeatures(tx, ctx)),
+      rf_probability: result.rf.probability,
+      composite: result.composite,
+      band: result.band,
+    });
+  } catch {
+    /* monitoring is non-critical */
+  }
+
   await supabaseAdmin.from("transactions").update({
     risk_score: result.composite, status: result.status,
   }).eq("id", tx.id);
