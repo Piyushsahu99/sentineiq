@@ -25,6 +25,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuantumRouteImport } from './routes/_app.quantum'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
+import { Route as AppModelDriftRouteImport } from './routes/_app.model-drift'
 import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
 import { Route as AppIngestRouteImport } from './routes/_app.ingest'
 import { Route as AppGraphRouteImport } from './routes/_app.graph'
@@ -34,6 +35,7 @@ import { Route as AppCorrelationRouteImport } from './routes/_app.correlation'
 import { Route as AppBehaviorRouteImport } from './routes/_app.behavior'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as ApiPublicHooksDriftScanRouteImport } from './routes/api/public/hooks/drift-scan'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -114,6 +116,11 @@ const AppProfileRoute = AppProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AppRoute,
 } as any)
+const AppModelDriftRoute = AppModelDriftRouteImport.update({
+  id: '/model-drift',
+  path: '/model-drift',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppInvestigationsRoute = AppInvestigationsRouteImport.update({
   id: '/investigations',
   path: '/investigations',
@@ -160,6 +167,11 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksDriftScanRoute = ApiPublicHooksDriftScanRouteImport.update({
+  id: '/api/public/hooks/drift-scan',
+  path: '/api/public/hooks/drift-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -174,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/graph': typeof AppGraphRoute
   '/ingest': typeof AppIngestRoute
   '/investigations': typeof AppInvestigationsRoute
+  '/model-drift': typeof AppModelDriftRoute
   '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
@@ -185,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
   '/auth/role-select': typeof AuthRoleSelectRoute
+  '/api/public/hooks/drift-scan': typeof ApiPublicHooksDriftScanRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -200,6 +214,7 @@ export interface FileRoutesByTo {
   '/graph': typeof AppGraphRoute
   '/ingest': typeof AppIngestRoute
   '/investigations': typeof AppInvestigationsRoute
+  '/model-drift': typeof AppModelDriftRoute
   '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
@@ -211,6 +226,7 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
   '/auth/role-select': typeof AuthRoleSelectRoute
+  '/api/public/hooks/drift-scan': typeof ApiPublicHooksDriftScanRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -228,6 +244,7 @@ export interface FileRoutesById {
   '/_app/graph': typeof AppGraphRoute
   '/_app/ingest': typeof AppIngestRoute
   '/_app/investigations': typeof AppInvestigationsRoute
+  '/_app/model-drift': typeof AppModelDriftRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/quantum': typeof AppQuantumRoute
   '/_app/reports': typeof AppReportsRoute
@@ -239,6 +256,7 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/mfa': typeof AuthMfaRoute
   '/auth/role-select': typeof AuthRoleSelectRoute
+  '/api/public/hooks/drift-scan': typeof ApiPublicHooksDriftScanRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -256,6 +274,7 @@ export interface FileRouteTypes {
     | '/graph'
     | '/ingest'
     | '/investigations'
+    | '/model-drift'
     | '/profile'
     | '/quantum'
     | '/reports'
@@ -267,6 +286,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/mfa'
     | '/auth/role-select'
+    | '/api/public/hooks/drift-scan'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -282,6 +302,7 @@ export interface FileRouteTypes {
     | '/graph'
     | '/ingest'
     | '/investigations'
+    | '/model-drift'
     | '/profile'
     | '/quantum'
     | '/reports'
@@ -293,6 +314,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/mfa'
     | '/auth/role-select'
+    | '/api/public/hooks/drift-scan'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -309,6 +331,7 @@ export interface FileRouteTypes {
     | '/_app/graph'
     | '/_app/ingest'
     | '/_app/investigations'
+    | '/_app/model-drift'
     | '/_app/profile'
     | '/_app/quantum'
     | '/_app/reports'
@@ -320,6 +343,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/mfa'
     | '/auth/role-select'
+    | '/api/public/hooks/drift-scan'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -329,6 +353,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiPublicHooksDriftScanRoute: typeof ApiPublicHooksDriftScanRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -446,6 +471,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProfileRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/model-drift': {
+      id: '/_app/model-drift'
+      path: '/model-drift'
+      fullPath: '/model-drift'
+      preLoaderRoute: typeof AppModelDriftRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/investigations': {
       id: '/_app/investigations'
       path: '/investigations'
@@ -509,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/drift-scan': {
+      id: '/api/public/hooks/drift-scan'
+      path: '/api/public/hooks/drift-scan'
+      fullPath: '/api/public/hooks/drift-scan'
+      preLoaderRoute: typeof ApiPublicHooksDriftScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -521,6 +560,7 @@ interface AppRouteChildren {
   AppGraphRoute: typeof AppGraphRoute
   AppIngestRoute: typeof AppIngestRoute
   AppInvestigationsRoute: typeof AppInvestigationsRoute
+  AppModelDriftRoute: typeof AppModelDriftRoute
   AppProfileRoute: typeof AppProfileRoute
   AppQuantumRoute: typeof AppQuantumRoute
   AppReportsRoute: typeof AppReportsRoute
@@ -539,6 +579,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppGraphRoute: AppGraphRoute,
   AppIngestRoute: AppIngestRoute,
   AppInvestigationsRoute: AppInvestigationsRoute,
+  AppModelDriftRoute: AppModelDriftRoute,
   AppProfileRoute: AppProfileRoute,
   AppQuantumRoute: AppQuantumRoute,
   AppReportsRoute: AppReportsRoute,
@@ -572,6 +613,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiPublicHooksDriftScanRoute: ApiPublicHooksDriftScanRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport

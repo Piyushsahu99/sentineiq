@@ -513,6 +513,90 @@ export type Database = {
         }
         Relationships: []
       }
+      model_drift_reports: {
+        Row: {
+          created_at: string
+          drifted_features: Json
+          feature_psi: Json
+          id: string
+          model_version: string
+          notes: string | null
+          overall_psi: number
+          prediction_psi: number
+          retrain_recommended: boolean
+          sample_size: number
+          status: string
+          window_end: string | null
+          window_start: string | null
+        }
+        Insert: {
+          created_at?: string
+          drifted_features?: Json
+          feature_psi?: Json
+          id?: string
+          model_version?: string
+          notes?: string | null
+          overall_psi?: number
+          prediction_psi?: number
+          retrain_recommended?: boolean
+          sample_size?: number
+          status?: string
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          created_at?: string
+          drifted_features?: Json
+          feature_psi?: Json
+          id?: string
+          model_version?: string
+          notes?: string | null
+          overall_psi?: number
+          prediction_psi?: number
+          retrain_recommended?: boolean
+          sample_size?: number
+          status?: string
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
+      model_feature_snapshots: {
+        Row: {
+          band: string | null
+          composite: number | null
+          created_at: string
+          customer_id: string | null
+          features: Json
+          id: string
+          model_version: string
+          rf_probability: number
+          transaction_id: string | null
+        }
+        Insert: {
+          band?: string | null
+          composite?: number | null
+          created_at?: string
+          customer_id?: string | null
+          features: Json
+          id?: string
+          model_version?: string
+          rf_probability: number
+          transaction_id?: string | null
+        }
+        Update: {
+          band?: string | null
+          composite?: number | null
+          created_at?: string
+          customer_id?: string | null
+          features?: Json
+          id?: string
+          model_version?: string
+          rf_probability?: number
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           alert_id: string | null
