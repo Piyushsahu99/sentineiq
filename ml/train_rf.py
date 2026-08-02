@@ -174,9 +174,58 @@ def bandFor(score: int) -> str:
     return "Approved"
 
 
+def build_baseline(X: np.ndarray, probs: np.ndarray) -> dict:
+    """Reference distribution for PSI drift monitoring (rf-baseline.json)."""
+    feats = []
+    for j, name in enumerate(FEATURES):
+        col = X[:, j].astype(float)
+        uniq = np.unique(col)
+        if set(uniq.tolist()) <= {0.0, 1.0}:
+            hi = float((col > 0.5).mean())
+            feats.append({
+                "name": name, "kind": "binary", "edges": [],
+                "props": [round(1 - hi, 5), round(hi, 5)],
+                "mean": round(hi, 5), "std": round(float(col.std()), 5),
+            })
+            continue
+        edges = sorted(set(round(float(v), 5) for v in np.quantile(col, np.arange(0.1, 1.0, 0.1))))
+        counts = np.zeros(len(edges) + 1)
+        for v in col:
+            idx = len(edges)
+            for i, e in enumerate(edges):
+                if v <= e:
+                    idx = i
+                    break
+            counts[idx] += 1
+        props = (counts / max(1, len(col))).round(5).tolist()
+        feats.append({
+            "name": name, "kind": "numeric", "edges": edges, "props": props,
+            "mean": round(float(col.mean()), 5), "std": round(float(col.std()), 5),
+        })
+
+    p_edges = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.65, 0.8, 0.9]
+    p_counts = np.zeros(len(p_edges) + 1)
+    for v in probs:
+        idx = len(p_edges)
+        for i, e in enumerate(p_edges):
+            if v <= e:
+                idx = i
+                break
+        p_counts[idx] += 1
+    return {
+        "features": feats,
+        "n_reference": int(len(X)),
+        "prediction": {
+            "edges": p_edges,
+            "props": (p_counts / max(1, len(probs))).round(5).tolist(),
+            "mean": round(float(probs.mean()), 5),
+        },
+    }
+
+
 def main():
-    print("[1/5] Building synthetic bank corpus (40k rows) ...")
-    X, y = build_dataset(40000)
+    print("[1/5] Building synthetic bank corpus (250k rows) ...")
+    X, y = build_dataset(250000)
     Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     print(f"      train={len(ytr)}  test={len(yte)}  positives={int(y.sum())}")
