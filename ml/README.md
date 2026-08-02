@@ -11,10 +11,12 @@ python -m pip install scikit-learn numpy
 python ml/train_rf.py
 ```
 
-Produces:
+Trains on a 250,000-row synthetic bank corpus (200k train / 50k held-out test),
+200 trees, depth 12. Produces:
 - `src/lib/ml/rf-model.json`   — tree arrays + isotonic calibration table
 - `src/lib/ml/rf-metrics.json` — ROC/AUC, PR-AUC, confusion matrix, feature importances
-- `src/lib/ml/rf-parity.json`  — 200 held-out rows for TS parity test
+- `src/lib/ml/rf-parity.json`  — 400 held-out rows for TS parity test
+- `src/lib/ml/rf-baseline.json` — 20k-row reference distribution for PSI drift monitoring
 
 ## Feature schema (24)
 
