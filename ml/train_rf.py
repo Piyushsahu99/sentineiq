@@ -313,7 +313,7 @@ def main():
         "n_train": int(len(ytr)),
         "n_test": int(len(yte)),
         "n_trees": 300,
-        "max_depth": 10,
+        "max_depth": 12,
         "roc_auc": round(auc, 4),
         "pr_auc": round(pr_auc, 4),
         "accuracy": round(accuracy, 4),
@@ -329,14 +329,14 @@ def main():
         ],
         "roc_curve": {"fpr": sample(fpr_c), "tpr": sample(tpr_c)},
         "pr_curve": {"precision": sample(pre_c), "recall": sample(rec_c)},
-        "datasets": ["Synthetic bank corpus (PaySim-inspired distributions)"],
-        "notes": "Calibrated RandomForest, 300 trees, depth=10. Isotonic probability calibration.",
+        "datasets": ["Synthetic bank corpus, 250k rows (PaySim-inspired distributions)"],
+        "notes": "Calibrated RandomForest, 300 trees, depth=12, 250k-row corpus. Isotonic probability calibration.",
     }
     with open(out_dir / "rf-metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
-    print("[5/5] Emitting parity fixture (200 held-out rows) ...")
-    idx = RNG.choice(len(Xte), size=200, replace=False)
+    print("[5/5] Emitting parity fixture + drift baseline ...")
+    idx = RNG.choice(len(Xte), size=400, replace=False)
     parity = {
         "features": FEATURES,
         "rows": [
@@ -346,6 +346,11 @@ def main():
     }
     with open(out_dir / "rf-parity.json", "w") as f:
         json.dump(parity, f)
+
+    bidx = RNG.choice(len(Xte), size=min(20000, len(Xte)), replace=False)
+    baseline = build_baseline(Xte[bidx], prob_cal[bidx])
+    with open(out_dir / "rf-baseline.json", "w") as f:
+        json.dump(baseline, f, separators=(",", ":"))
 
     print("\nDone.")
     print(f"  ROC-AUC:  {auc:.4f}")
