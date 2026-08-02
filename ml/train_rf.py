@@ -230,9 +230,9 @@ def main():
 
     print(f"      train={len(ytr)}  test={len(yte)}  positives={int(y.sum())}")
 
-    print("[2/5] Training RandomForest (300 trees, depth=10) ...")
+    print("[2/5] Training RandomForest (300 trees, depth=12) ...")
     base = RandomForestClassifier(
-        n_estimators=300, max_depth=10, min_samples_leaf=8,
+        n_estimators=300, max_depth=12, min_samples_leaf=60,
         class_weight="balanced", random_state=42, n_jobs=-1,
     )
     base.fit(Xtr, ytr)
@@ -241,7 +241,7 @@ def main():
     # Calibrate on a held-out slice for real probabilities
     Xtr2, Xcal, ytr2, ycal = train_test_split(Xtr, ytr, test_size=0.2, random_state=1)
     base2 = RandomForestClassifier(
-        n_estimators=300, max_depth=10, min_samples_leaf=8,
+        n_estimators=300, max_depth=12, min_samples_leaf=60,
         class_weight="balanced", random_state=42, n_jobs=-1,
     )
     base2.fit(Xtr2, ytr2)
