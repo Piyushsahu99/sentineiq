@@ -64,6 +64,5 @@ job hit `/api/public/hooks/drift-scan`.
 Regenerate the baseline after retraining:
 
 ```bash
-python ml/train_rf.py   # refreshes rf-parity.json
-# then rebuild rf-baseline.json from the new parity rows
+python ml/train_rf.py   # also rewrites rf-parity.json and rf-baseline.json
 ```
