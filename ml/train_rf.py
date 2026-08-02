@@ -230,9 +230,9 @@ def main():
 
     print(f"      train={len(ytr)}  test={len(yte)}  positives={int(y.sum())}")
 
-    print("[2/5] Training RandomForest (300 trees, depth=12) ...")
+    print("[2/5] Training RandomForest (200 trees, depth=12) ...")
     base = RandomForestClassifier(
-        n_estimators=300, max_depth=12, min_samples_leaf=60,
+        n_estimators=200, max_depth=12, min_samples_leaf=80,
         class_weight="balanced", random_state=42, n_jobs=-1,
     )
     base.fit(Xtr, ytr)
@@ -241,7 +241,7 @@ def main():
     # Calibrate on a held-out slice for real probabilities
     Xtr2, Xcal, ytr2, ycal = train_test_split(Xtr, ytr, test_size=0.2, random_state=1)
     base2 = RandomForestClassifier(
-        n_estimators=300, max_depth=12, min_samples_leaf=60,
+        n_estimators=200, max_depth=12, min_samples_leaf=80,
         class_weight="balanced", random_state=42, n_jobs=-1,
     )
     base2.fit(Xtr2, ytr2)
@@ -312,7 +312,7 @@ def main():
         "trained_at": None,
         "n_train": int(len(ytr)),
         "n_test": int(len(yte)),
-        "n_trees": 300,
+        "n_trees": 200,
         "max_depth": 12,
         "roc_auc": round(auc, 4),
         "pr_auc": round(pr_auc, 4),
@@ -330,7 +330,7 @@ def main():
         "roc_curve": {"fpr": sample(fpr_c), "tpr": sample(tpr_c)},
         "pr_curve": {"precision": sample(pre_c), "recall": sample(rec_c)},
         "datasets": ["Synthetic bank corpus, 250k rows (PaySim-inspired distributions)"],
-        "notes": "Calibrated RandomForest, 300 trees, depth=12, 250k-row corpus. Isotonic probability calibration.",
+        "notes": "Calibrated RandomForest, 200 trees, depth=12, 250k-row corpus. Isotonic probability calibration.",
     }
     with open(out_dir / "rf-metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
