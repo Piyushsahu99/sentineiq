@@ -12,8 +12,8 @@ import { rfProbability, rfTopFeatures } from "./ml/rf-infer.server";
  * the Block band on its own.
  */
 const RF_CURVE: Array<[number, number]> = [
-  [0.0, 0], [0.02, 4], [0.05, 14], [0.12, 34], [0.20, 48],
-  [0.30, 62], [0.40, 78], [0.52, 90], [0.70, 96], [1.0, 100],
+  [0.0, 0], [0.02, 4], [0.05, 15], [0.10, 36], [0.16, 52],
+  [0.24, 66], [0.33, 82], [0.44, 92], [0.60, 97], [1.0, 100],
 ];
 export function rfDecisionScore(p: number): number {
   const x = Math.max(0, Math.min(1, p));

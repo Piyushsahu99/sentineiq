@@ -174,16 +174,65 @@ def bandFor(score: int) -> str:
     return "Approved"
 
 
+def build_baseline(X: np.ndarray, probs: np.ndarray) -> dict:
+    """Reference distribution for PSI drift monitoring (rf-baseline.json)."""
+    feats = []
+    for j, name in enumerate(FEATURES):
+        col = X[:, j].astype(float)
+        uniq = np.unique(col)
+        if set(uniq.tolist()) <= {0.0, 1.0}:
+            hi = float((col > 0.5).mean())
+            feats.append({
+                "name": name, "kind": "binary", "edges": [],
+                "props": [round(1 - hi, 5), round(hi, 5)],
+                "mean": round(hi, 5), "std": round(float(col.std()), 5),
+            })
+            continue
+        edges = sorted(set(round(float(v), 5) for v in np.quantile(col, np.arange(0.1, 1.0, 0.1))))
+        counts = np.zeros(len(edges) + 1)
+        for v in col:
+            idx = len(edges)
+            for i, e in enumerate(edges):
+                if v <= e:
+                    idx = i
+                    break
+            counts[idx] += 1
+        props = (counts / max(1, len(col))).round(5).tolist()
+        feats.append({
+            "name": name, "kind": "numeric", "edges": edges, "props": props,
+            "mean": round(float(col.mean()), 5), "std": round(float(col.std()), 5),
+        })
+
+    p_edges = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.65, 0.8, 0.9]
+    p_counts = np.zeros(len(p_edges) + 1)
+    for v in probs:
+        idx = len(p_edges)
+        for i, e in enumerate(p_edges):
+            if v <= e:
+                idx = i
+                break
+        p_counts[idx] += 1
+    return {
+        "features": feats,
+        "n_reference": int(len(X)),
+        "prediction": {
+            "edges": p_edges,
+            "props": (p_counts / max(1, len(probs))).round(5).tolist(),
+            "mean": round(float(probs.mean()), 5),
+        },
+    }
+
+
 def main():
-    print("[1/5] Building synthetic bank corpus (40k rows) ...")
-    X, y = build_dataset(40000)
+    print("[1/5] Building synthetic bank corpus (250k rows) ...")
+    X, y = build_dataset(250000)
     Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     print(f"      train={len(ytr)}  test={len(yte)}  positives={int(y.sum())}")
 
-    print("[2/5] Training RandomForest (300 trees, depth=10) ...")
+    print("[2/5] Training RandomForest (200 trees, depth=12) ...")
     base = RandomForestClassifier(
-        n_estimators=300, max_depth=10, min_samples_leaf=8,
+        n_estimators=200, max_depth=12, min_samples_leaf=80,
         class_weight="balanced", random_state=42, n_jobs=-1,
     )
     base.fit(Xtr, ytr)
@@ -192,7 +241,7 @@ def main():
     # Calibrate on a held-out slice for real probabilities
     Xtr2, Xcal, ytr2, ycal = train_test_split(Xtr, ytr, test_size=0.2, random_state=1)
     base2 = RandomForestClassifier(
-        n_estimators=300, max_depth=10, min_samples_leaf=8,
+        n_estimators=200, max_depth=12, min_samples_leaf=80,
         class_weight="balanced", random_state=42, n_jobs=-1,
     )
     base2.fit(Xtr2, ytr2)
@@ -263,8 +312,8 @@ def main():
         "trained_at": None,
         "n_train": int(len(ytr)),
         "n_test": int(len(yte)),
-        "n_trees": 300,
-        "max_depth": 10,
+        "n_trees": 200,
+        "max_depth": 12,
         "roc_auc": round(auc, 4),
         "pr_auc": round(pr_auc, 4),
         "accuracy": round(accuracy, 4),
@@ -280,14 +329,14 @@ def main():
         ],
         "roc_curve": {"fpr": sample(fpr_c), "tpr": sample(tpr_c)},
         "pr_curve": {"precision": sample(pre_c), "recall": sample(rec_c)},
-        "datasets": ["Synthetic bank corpus (PaySim-inspired distributions)"],
-        "notes": "Calibrated RandomForest, 300 trees, depth=10. Isotonic probability calibration.",
+        "datasets": ["Synthetic bank corpus, 250k rows (PaySim-inspired distributions)"],
+        "notes": "Calibrated RandomForest, 200 trees, depth=12, 250k-row corpus. Isotonic probability calibration.",
     }
     with open(out_dir / "rf-metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
-    print("[5/5] Emitting parity fixture (200 held-out rows) ...")
-    idx = RNG.choice(len(Xte), size=200, replace=False)
+    print("[5/5] Emitting parity fixture + drift baseline ...")
+    idx = RNG.choice(len(Xte), size=400, replace=False)
     parity = {
         "features": FEATURES,
         "rows": [
@@ -297,6 +346,11 @@ def main():
     }
     with open(out_dir / "rf-parity.json", "w") as f:
         json.dump(parity, f)
+
+    bidx = RNG.choice(len(Xte), size=min(20000, len(Xte)), replace=False)
+    baseline = build_baseline(Xte[bidx], prob_cal[bidx])
+    with open(out_dir / "rf-baseline.json", "w") as f:
+        json.dump(baseline, f, separators=(",", ":"))
 
     print("\nDone.")
     print(f"  ROC-AUC:  {auc:.4f}")

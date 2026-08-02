@@ -274,11 +274,11 @@ function About() {
         <GlassCard className="p-5 md:p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
-              { k: "0.950", v: "Random Forest ROC-AUC" },
-              { k: "0.911", v: "PR-AUC (imbalanced)" },
-              { k: "90.2%", v: "Held-out accuracy" },
-              { k: "3.1%", v: "False-positive rate" },
-              { k: "40k", v: "Training + test rows" },
+              { k: "0.954", v: "Random Forest ROC-AUC" },
+              { k: "0.927", v: "PR-AUC (imbalanced)" },
+              { k: "91.0%", v: "Held-out accuracy" },
+              { k: "5.6%", v: "False-positive rate" },
+              { k: "250k", v: "Training + test rows" },
               { k: "94ms", v: "Median decision latency" },
             ].map((s) => (
               <div key={s.v} className="rounded-xl hairline bg-white/3 px-3 py-3">
