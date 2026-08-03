@@ -2,7 +2,9 @@
 
 Run before every demo, publish, or release. Each check has a **manual UI path** and, where possible, an **automated script**. All checks operate against **dummy data only** — no real customer PII should ever be needed.
 
-**Automated runner:** `python3 scripts/smoke.py` (Playwright-based, headless).
+**Automated runners:**
+- `npm run test:e2e` (`scripts/e2e.py`) — full regression: public pages, login validation, SSO/MFA gates, route protection, and an authenticated screen sweep. Set `E2E_SIGNUP=1` to create a throwaway account, or `E2E_EMAIL`/`E2E_PASSWORD` to reuse one.
+- `python3 scripts/smoke.py` — quick pre-demo smoke pass.
 
 ---
 
