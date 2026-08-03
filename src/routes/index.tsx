@@ -6,7 +6,7 @@ import { Logo } from "@/components/sq/logo";
 import { GlassCard } from "@/components/sq/glass-card";
 import {
   Shield, Activity, Brain, Network, Atom, FileBarChart2, Zap, Lock,
-  ChevronDown, ArrowRight, CheckCircle2, Sparkles, Globe2, DollarSign,
+  ChevronDown, ArrowRight, CheckCircle2, Sparkles, Globe2, IndianRupee,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -94,7 +94,7 @@ function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="relative z-10 px-4 sm:px-6 md:px-10 pt-10 sm:pt-14 pb-20 sm:pb-24 max-w-7xl mx-auto">
+      <section className="relative z-10 px-4 sm:px-6 md:px-10 pt-10 sm:pt-14 pb-12 sm:pb-16 max-w-7xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="inline-flex items-center gap-2 rounded-full hairline bg-white/3 px-3 py-1 text-[10px] uppercase tracking-widest text-cyan-300">
             <Sparkles className="h-3 w-3" /> Gemini-powered · Live correlation engine
@@ -128,21 +128,22 @@ function Landing() {
         </motion.div>
 
         {/* Preview card */}
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="mt-16 relative">
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="mt-12 relative">
           <div className="absolute -inset-6 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-fuchsia-500/10 blur-3xl -z-10" />
           <GlassCard className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-semibold">Global SOC · Live</span>
-                <span className="text-[10px] text-muted-foreground">us-east · eu-west · ap-south</span>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-semibold whitespace-nowrap">Global SOC · Live</span>
+                <span className="hidden sm:inline text-[10px] text-muted-foreground truncate">us-east · eu-west · ap-south</span>
               </div>
-              <div className="text-[10px] font-mono text-muted-foreground">correlation.pipeline · v4.12.0</div>
+              <div className="text-[10px] font-mono text-muted-foreground whitespace-nowrap"><span className="hidden sm:inline">correlation.pipeline · </span>v4.12.0</div>
             </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { icon: Activity, label: "Alerts (24h)", value: "128", trend: "+12%", color: "text-cyan-300" },
-                { icon: DollarSign, label: "Blocked wires", value: "₹18.4 Cr", trend: "+3.2%", color: "text-emerald-300" },
+                { icon: IndianRupee, label: "Blocked wires", value: "₹18.4 Cr", trend: "+3.2%", color: "text-emerald-300" },
                 { icon: Brain, label: "AI investigations", value: "42", trend: "+9%", color: "text-violet-300" },
                 { icon: Atom, label: "PQ-ready assets", value: "63%", trend: "+8%", color: "text-fuchsia-300" },
               ].map((k) => (
@@ -161,7 +162,7 @@ function Landing() {
       </section>
 
       {/* Platform pillars */}
-      <section id="platform" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-7xl mx-auto">
+      <section id="platform" className="relative z-10 px-4 sm:px-6 md:px-10 py-14 md:py-20 max-w-7xl mx-auto">
         <div className="max-w-2xl">
           <div className="text-[10px] uppercase tracking-widest text-cyan-300">The platform</div>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold tracking-tight">Correlation, not silos.</h2>
@@ -170,7 +171,7 @@ function Landing() {
         <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { icon: Shield, title: "Unified cyber plane", body: "Firewall, VPN, IAM, endpoint, DNS, email, cloud — normalised into one taxonomy." },
-            { icon: DollarSign, title: "Fraud in real time", body: "Score transactions against device, geo, velocity, and beneficiary trust in <100ms." },
+            { icon: IndianRupee, title: "Fraud in real time", body: "Score transactions against device, geo, velocity, and beneficiary trust in <100ms." },
             { icon: Network, title: "Entity graph", body: "Customers, devices, IPs, merchants, and threat actors as first-class nodes." },
             { icon: Brain, title: "Explainable AI", body: "Every decision comes with contributing features, weights, and counter-evidence." },
             { icon: Atom, title: "Quantum readiness", body: "Cryptographic inventory, HNDL exposure, and PQ migration priorities per asset." },
@@ -188,7 +189,7 @@ function Landing() {
       </section>
 
       {/* Modules */}
-      <section id="modules" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-7xl mx-auto">
+      <section id="modules" className="relative z-10 px-4 sm:px-6 md:px-10 py-14 md:py-20 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-cyan-300">Modules</div>
@@ -222,7 +223,7 @@ function Landing() {
       </section>
 
       {/* Workflow */}
-      <section id="workflow" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-7xl mx-auto">
+      <section id="workflow" className="relative z-10 px-4 sm:px-6 md:px-10 py-14 md:py-20 max-w-7xl mx-auto">
         <div className="max-w-2xl">
           <div className="text-[10px] uppercase tracking-widest text-cyan-300">Workflow</div>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold tracking-tight">From raw signal to blocked wire.</h2>
@@ -262,7 +263,7 @@ function Landing() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-4xl mx-auto">
+      <section id="faq" className="relative z-10 px-4 sm:px-6 md:px-10 py-14 md:py-20 max-w-4xl mx-auto">
         <div className="text-center">
           <div className="text-[10px] uppercase tracking-widest text-cyan-300">FAQ</div>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold tracking-tight">Questions from CISOs, answered.</h2>
@@ -274,7 +275,7 @@ function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-5xl mx-auto text-center">
+      <section className="relative z-10 px-4 sm:px-6 md:px-10 py-14 md:py-20 max-w-5xl mx-auto text-center">
         <div className="relative rounded-3xl hairline glass p-10 overflow-hidden">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[600px] bg-gradient-to-b from-cyan-500/25 to-transparent blur-3xl" />
           <div className="relative">

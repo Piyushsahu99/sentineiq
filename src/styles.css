@@ -213,3 +213,30 @@
 @utility ticker {
   animation: ticker 40s linear infinite;
 }
+
+/* Accessible focus ring + smooth anchor scrolling + reduced-motion respect */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--cyber-blue) 75%, transparent);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
