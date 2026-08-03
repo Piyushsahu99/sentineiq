@@ -131,14 +131,15 @@ function Landing() {
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="mt-12 relative">
           <div className="absolute -inset-6 bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-fuchsia-500/10 blur-3xl -z-10" />
           <GlassCard className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-semibold">Global SOC · Live</span>
-                <span className="text-[10px] text-muted-foreground">us-east · eu-west · ap-south</span>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-semibold whitespace-nowrap">Global SOC · Live</span>
+                <span className="hidden sm:inline text-[10px] text-muted-foreground truncate">us-east · eu-west · ap-south</span>
               </div>
-              <div className="text-[10px] font-mono text-muted-foreground">correlation.pipeline · v4.12.0</div>
+              <div className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">v4.12.0</div>
             </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { icon: Activity, label: "Alerts (24h)", value: "128", trend: "+12%", color: "text-cyan-300" },
