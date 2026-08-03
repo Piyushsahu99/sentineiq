@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "python3 scripts/e2e.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
