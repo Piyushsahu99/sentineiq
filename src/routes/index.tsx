@@ -137,7 +137,7 @@ function Landing() {
                 <span className="text-xs font-semibold whitespace-nowrap">Global SOC · Live</span>
                 <span className="hidden sm:inline text-[10px] text-muted-foreground truncate">us-east · eu-west · ap-south</span>
               </div>
-              <div className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">v4.12.0</div>
+              <div className="text-[10px] font-mono text-muted-foreground whitespace-nowrap"><span className="hidden sm:inline">correlation.pipeline · </span>v4.12.0</div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
