@@ -360,7 +360,7 @@ function About() {
       </Section>
 
       {/* CTA */}
-      <section className="relative z-10 px-4 sm:px-6 md:px-10 py-20 max-w-5xl mx-auto text-center">
+      <section className="relative z-10 px-4 sm:px-6 md:px-10 py-14 md:py-20 max-w-5xl mx-auto text-center">
         <div className="relative rounded-3xl hairline glass p-10 overflow-hidden">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[600px] bg-gradient-to-b from-cyan-500/25 to-transparent blur-3xl" />
           <div className="relative">
