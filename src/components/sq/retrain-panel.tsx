@@ -47,7 +47,7 @@ export function RetrainPanel({ days }: { days: number }) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["model-versions"],
-    queryFn: () => fetchVersions({ data: {} }),
+    queryFn: () => fetchVersions({}),
     refetchInterval: 120_000,
   });
 
