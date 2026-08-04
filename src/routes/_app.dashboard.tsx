@@ -4,9 +4,8 @@ import { KpiCard } from "@/components/sq/kpi-card";
 import { ProgressRing } from "@/components/sq/progress-ring";
 import { Heatmap } from "@/components/sq/heatmap";
 import { RiskBadge, RiskBar, SeverityDot } from "@/components/sq/risk";
-import { Sparkline } from "@/components/sq/sparkline";
 import {
-  kpis, heatmap, attackCategories, fraudTrend, txStream, riskDistribution,
+  kpis, heatmap, attackCategories, fraudTrend, riskDistribution,
 } from "@/lib/mock/data";
 import { Shield, AlertTriangle, ShieldCheck, Activity, Gauge, Sparkles, Atom, TrendingUp, Ban, FileSearch2, ArrowRight } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
