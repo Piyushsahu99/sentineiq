@@ -52,6 +52,10 @@ const BASE_FEATURES = (baseline as any).features as BaselineFeature[];
 const BASE_PRED = (baseline as any).prediction as { edges: number[]; props: number[]; mean: number };
 export const BASELINE_SIZE: number = (baseline as any).n_reference;
 
+/** Per-feature reference mean/std, indexed like FEATURE_NAMES. Used by retraining. */
+export const BASELINE_FEATURE_STATS: Array<{ name: string; mean: number; std: number }> =
+  BASE_FEATURES.map((f) => ({ name: f.name, mean: f.mean, std: f.std }));
+
 export function levelFor(psi: number): DriftLevel {
   if (psi >= PSI_DRIFT) return "drifted";
   if (psi >= PSI_WATCH) return "watch";

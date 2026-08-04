@@ -3,6 +3,7 @@
 // Server-only (imports supabaseAdmin dynamically at the call site).
 
 import { rfProbability, rfTopFeatures } from "./ml/rf-infer.server";
+import { applyOverlay, type Overlay } from "./ml/rf-retrain.server";
 
 /**
  * Maps a calibrated fraud probability onto the 0-100 decision score used by
@@ -54,6 +55,8 @@ export type ScoreResult = {
   investigation_id: string | null;
   rf: {
     probability: number;
+    base_probability?: number;
+    model_version?: string;
     score: number;
     top_features: Array<{ feature: string; contribution: number }>;
     weights: { rf: number; rules: number };
@@ -540,7 +543,13 @@ function buildTimeline(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>) {
 }
 
 // ---------- main scorer ----------
-export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adjustedSignals: Signal[], suppressed: string[]): ScoreResult {
+export function score(
+  tx: any,
+  ctx: Awaited<ReturnType<typeof loadContext>>,
+  adjustedSignals: Signal[],
+  suppressed: string[],
+  activeModel?: { version: string; overlay: Overlay | null } | null,
+): ScoreResult {
   const baseSum = adjustedSignals.reduce((s, x) => s + x.weight, 0);
   const baseline = ctx.cust?.risk_baseline ?? 20;
   const baselineBonus = Math.round(baseline / 5);
@@ -550,7 +559,9 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
 
   // ---- Random Forest (hybrid) ----
   const features = buildFeatures(tx, ctx);
-  const rfProb = rfProbability(features);
+  const rfBaseProb = rfProbability(features);
+  // Adaptive overlay from the active retrained model version (if any).
+  const rfProb = applyOverlay(activeModel?.overlay ?? null, rfBaseProb, features);
   const rfScore = rfDecisionScore(rfProb);
   const rfTop = rfTopFeatures(features, 5);
 
@@ -607,7 +618,12 @@ export function score(tx: any, ctx: Awaited<ReturnType<typeof loadContext>>, adj
     signals: adjustedSignals, escalations, risk_breakdown, timeline,
     recommended_action, suppressed, force_block: false,
     investigation_id: null,
-    rf: { probability: Math.round(rfProb * 10000) / 10000, score: rfScore, top_features: rfTop, weights: { rf: RF_WEIGHT, rules: RULES_WEIGHT } },
+    rf: {
+      probability: Math.round(rfProb * 10000) / 10000,
+      base_probability: Math.round(rfBaseProb * 10000) / 10000,
+      model_version: activeModel?.version ?? "rf-1.0.0",
+      score: rfScore, top_features: rfTop, weights: { rf: RF_WEIGHT, rules: RULES_WEIGHT },
+    },
 
   };
 }
@@ -638,7 +654,9 @@ export async function scoreAndPersist(supabaseAdmin: any, txId: string): Promise
   const ctx = await loadContext(supabaseAdmin, tx);
   const raw = runRules(tx, ctx);
   const { adjusted, suppressed } = await applySuppressions(supabaseAdmin, raw, tx.customer_id);
-  const result = score(tx, ctx, adjusted, suppressed);
+  const { loadActiveModel } = await import("./ml/rf-active.server");
+  const activeModel = await loadActiveModel(supabaseAdmin);
+  const result = score(tx, ctx, adjusted, suppressed, activeModel);
 
   await supabaseAdmin.from("risk_scores").insert({
     transaction_id: tx.id, customer_id: tx.customer_id, composite: result.composite,
@@ -656,6 +674,7 @@ export async function scoreAndPersist(supabaseAdmin: any, txId: string): Promise
       rf_probability: result.rf.probability,
       composite: result.composite,
       band: result.band,
+      model_version: activeModel.version,
     });
   } catch {
     /* monitoring is non-critical */

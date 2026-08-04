@@ -524,6 +524,7 @@ export type Database = {
           overall_psi: number
           prediction_psi: number
           retrain_recommended: boolean
+          retrain_version: string | null
           sample_size: number
           status: string
           window_end: string | null
@@ -539,6 +540,7 @@ export type Database = {
           overall_psi?: number
           prediction_psi?: number
           retrain_recommended?: boolean
+          retrain_version?: string | null
           sample_size?: number
           status?: string
           window_end?: string | null
@@ -554,6 +556,7 @@ export type Database = {
           overall_psi?: number
           prediction_psi?: number
           retrain_recommended?: boolean
+          retrain_version?: string | null
           sample_size?: number
           status?: string
           window_end?: string | null
@@ -596,6 +599,80 @@ export type Database = {
           transaction_id?: string | null
         }
         Relationships: []
+      }
+      model_versions: {
+        Row: {
+          accepted: boolean
+          activated_at: string | null
+          calibration: Json
+          created_at: string
+          created_by: string | null
+          drift_report_id: string | null
+          feature_weights: Json
+          gate: Json
+          holdout_size: number
+          id: string
+          metrics: Json
+          notes: string | null
+          parent_version: string | null
+          positive_labels: number
+          retired_at: string | null
+          sample_size: number
+          status: string
+          trigger: string
+          version: string
+        }
+        Insert: {
+          accepted?: boolean
+          activated_at?: string | null
+          calibration?: Json
+          created_at?: string
+          created_by?: string | null
+          drift_report_id?: string | null
+          feature_weights?: Json
+          gate?: Json
+          holdout_size?: number
+          id?: string
+          metrics?: Json
+          notes?: string | null
+          parent_version?: string | null
+          positive_labels?: number
+          retired_at?: string | null
+          sample_size?: number
+          status?: string
+          trigger?: string
+          version: string
+        }
+        Update: {
+          accepted?: boolean
+          activated_at?: string | null
+          calibration?: Json
+          created_at?: string
+          created_by?: string | null
+          drift_report_id?: string | null
+          feature_weights?: Json
+          gate?: Json
+          holdout_size?: number
+          id?: string
+          metrics?: Json
+          notes?: string | null
+          parent_version?: string | null
+          positive_labels?: number
+          retired_at?: string | null
+          sample_size?: number
+          status?: string
+          trigger?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_versions_drift_report_id_fkey"
+            columns: ["drift_report_id"]
+            isOneToOne: false
+            referencedRelation: "model_drift_reports"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
