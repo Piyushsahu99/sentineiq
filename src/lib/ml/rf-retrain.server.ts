@@ -71,6 +71,9 @@ export const MAX_AUC_LOSS = 0.01;
 /** Learned feature weights are clamped so one noisy window cannot flip the model. */
 export const MAX_FEATURE_WEIGHT = 1.5;
 
+/** Share of the isotonic recalibration vs the raw corrected score. */
+export const ISO_BLEND = 0.85;
+
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const round = (v: number, d = 4) => Math.round(v * 10 ** d) / 10 ** d;
 const sigmoid = (z: number) => 1 / (1 + Math.exp(-clamp(z, -30, 30)));
@@ -180,7 +183,10 @@ export function applyOverlay(overlay: Overlay | null | undefined, p: number, fea
   for (const w of overlay.weights) {
     z += w.weight * standardise(w.index, Number(features[w.index]) || 0);
   }
-  return clamp(isoApply(overlay.iso, sigmoid(z)), 0, 1);
+  const raw = sigmoid(z);
+  // Blend isotonic output with the raw score: isotonic pooling creates ties that
+  // erode ranking power, the small raw share keeps the ordering strict.
+  return clamp(ISO_BLEND * isoApply(overlay.iso, raw) + (1 - ISO_BLEND) * raw, 0, 1);
 }
 
 // ---------- fitting ----------
@@ -245,7 +251,9 @@ export function trainCandidate(rows: LabeledRow[], driftedFeatures: string[]): R
   // Learn weights on the drifted inputs first; if drift is diffuse, fall back
   // to the features that actually separate the labels in this window.
   let indices = driftedFeatures.map((f) => FEATURE_NAMES.indexOf(f)).filter((i) => i >= 0);
-  if (indices.length < 3) {
+  // Only pad with discriminative features when drift gives us almost nothing —
+  // padding a good drift signal with noisy inputs costs ranking power.
+  if (indices.length < 2) {
     const scored = FEATURE_NAMES.map((_, i) => {
       const pos = valid.filter((r) => r.label === 1).map((r) => standardise(i, Number(r.features[i]) || 0));
       const neg = valid.filter((r) => r.label === 0).map((r) => standardise(i, Number(r.features[i]) || 0));
@@ -253,7 +261,7 @@ export function trainCandidate(rows: LabeledRow[], driftedFeatures: string[]): R
       return { i, sep: Math.abs(m(pos) - m(neg)) };
     }).sort((x, y) => y.sep - x.sep);
     for (const s of scored) {
-      if (indices.length >= 6) break;
+      if (indices.length >= 4) break;
       if (!indices.includes(s.i) && s.sep > 0) indices.push(s.i);
     }
   }
