@@ -66,3 +66,34 @@ Regenerate the baseline after retraining:
 ```bash
 python ml/train_rf.py   # also rewrites rf-parity.json and rf-baseline.json
 ```
+
+## Automated retraining
+
+The forest stays frozen; retraining fits an **adaptive overlay** on top of it
+from recent labelled traffic (`src/lib/ml/rf-retrain.server.ts`):
+
+```
+logit(p_adj) = a · logit(p_rf) + b + Σ wⱼ · zⱼ      (z = standardised drifted feature)
+p_final      = 0.85 · isotonic(p_adj) + 0.15 · p_adj
+```
+
+Workflow (`src/lib/retrain-core.server.ts`):
+
+1. Pull `model_feature_snapshots` for the window and label them —
+   analyst verdicts (weight 1.0) > investigation status (0.6) > settled
+   transaction outcome (0.3).
+2. Drift gate: skip unless the PSI scan says `retrain_recommended` (or `force`).
+3. Fit `a`, `b`, `wⱼ` by weighted logistic descent + PAVA recalibration on a
+   chronological 70/30 split.
+4. Validate on the most recent hold-out: accept only when Brier improves ≥1%
+   and ROC-AUC drops ≤0.01.
+5. Persist to `model_versions` (`active` / `candidate` / `rejected`), retire the
+   previous active version, and notify.
+
+Scoring reads the active version through `rf-active.server.ts` (60s cache);
+with no active row it serves the frozen base `rf-1.0.0`. Trigger it from
+`/model-drift` (Run / Force retrain, Activate, Roll back to base) or let the
+daily drift cron chain into it via `/api/public/hooks/drift-scan`;
+`/api/public/hooks/retrain` runs it standalone.
+
+Tests: `tests/retrain.test.ts`.

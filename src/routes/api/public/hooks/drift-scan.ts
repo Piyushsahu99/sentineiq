@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/public/hooks/drift-scan")({
         }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { runDriftScanCore } = await import("@/lib/drift-core.server");
-        const report = await runDriftScanCore(supabaseAdmin, 7);
+        const report = await runDriftScanCore(supabaseAdmin, 7, true);
         return new Response(
           JSON.stringify({
             ok: true,
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/api/public/hooks/drift-scan")({
             overall_psi: report.overall_psi,
             prediction_psi: report.prediction_psi,
             sample_size: report.sample_size,
+            retrain: report.retrain,
           }),
           { headers: { "Content-Type": "application/json" } },
         );
