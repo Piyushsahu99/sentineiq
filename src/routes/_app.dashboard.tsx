@@ -181,16 +181,12 @@ function Dashboard() {
         </GlassCard>
 
         <GlassCard className="col-span-12 md:col-span-6 xl:col-span-4">
-          <SectionHeader title="Transaction Monitoring" description="Rolling 60-second stream" />
-          <div className="grid grid-cols-3 gap-3">
-            <div><div className="text-[10px] text-muted-foreground uppercase">Approved</div><div className="text-lg font-mono">2,847<span className="text-xs text-muted-foreground">/s</span></div><Sparkline data={txStream.map((s) => s.approved)} color="var(--risk-low)" width={110} height={30} /></div>
-            <div><div className="text-[10px] text-muted-foreground uppercase">Flagged</div><div className="text-lg font-mono">91<span className="text-xs text-muted-foreground">/s</span></div><Sparkline data={txStream.map((s) => s.flagged)} color="var(--risk-medium)" width={110} height={30} /></div>
-            <div><div className="text-[10px] text-muted-foreground uppercase">Blocked</div><div className="text-lg font-mono">14<span className="text-xs text-muted-foreground">/s</span></div><Sparkline data={txStream.map((s) => s.blocked)} color="var(--risk-critical)" width={110} height={30} /></div>
-          </div>
-          <div className="mt-4 flex items-center justify-center">
-            <ProgressRing value={94} size={140} label="Model Health" sublabel="ensemble v2.4.1 · 12 features" />
+          <SectionHeader title="Model Health" description="Hybrid RF + rules ensemble" />
+          <div className="flex items-center justify-center py-2">
+            <ProgressRing value={94} size={132} label="Model Health" sublabel="ensemble v2.4.1" />
           </div>
         </GlassCard>
+
 
         <RecentPanel title="Recent AI Investigations" href="/investigations" items={(invs.data ?? []).slice(0, 6).map((i) => ({
           id: i.id, primary: i.title, secondary: `${i.confidence}% confidence · ${formatMoney(i.business_impact ?? 0, prefs)} impact`, ts: new Date(i.created_at).getTime(), icon: <FileSearch2 className="h-3.5 w-3.5 text-violet-300" />,
