@@ -1,7 +1,7 @@
 // Shared drift-scan logic: compute, persist, and alert. Server-only.
 import { computeDrift } from "./ml/rf-drift.server";
 
-export async function runDriftScanCore(supabaseAdmin: any, days = 7) {
+export async function runDriftScanCore(supabaseAdmin: any, days = 7, autoRetrain = false) {
   const since = new Date(Date.now() - days * 86400_000).toISOString();
   const { data: snaps } = await supabaseAdmin
     .from("model_feature_snapshots")
@@ -44,5 +44,17 @@ export async function runDriftScanCore(supabaseAdmin: any, days = 7) {
     });
   }
 
-  return { ...report, report_id: saved?.id ?? null, window_days: days };
+  // Close the loop: when drift crosses the retrain threshold, kick off the
+  // validated retraining workflow immediately (cron path only).
+  let retrain: any = null;
+  if (autoRetrain && report.retrain_recommended) {
+    try {
+      const { runRetrainingWorkflow } = await import("./retrain-core.server");
+      retrain = await runRetrainingWorkflow(supabaseAdmin, { days, trigger: "drift-cron" });
+    } catch (e) {
+      retrain = { stage: "error", reason: String((e as any)?.message ?? e) };
+    }
+  }
+
+  return { ...report, report_id: saved?.id ?? null, window_days: days, retrain };
 }

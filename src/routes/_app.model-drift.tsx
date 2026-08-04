@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { RetrainPanel } from "@/components/sq/retrain-panel";
 
 export const Route = createFileRoute("/_app/model-drift")({
   ssr: false,
@@ -158,6 +159,8 @@ function DriftPage() {
               ))}
             </div>
           </GlassCard>
+
+          <RetrainPanel days={days} />
 
           <GlassCard className="p-4 sm:p-6">
             <SectionHeader title="Scan history" description="Persisted drift checks and retraining decisions" />
