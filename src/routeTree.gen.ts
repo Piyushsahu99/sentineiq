@@ -35,6 +35,7 @@ import { Route as AppCorrelationRouteImport } from './routes/_app.correlation'
 import { Route as AppBehaviorRouteImport } from './routes/_app.behavior'
 import { Route as AppAlertsRouteImport } from './routes/_app.alerts'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as ApiPublicHooksRetrainRouteImport } from './routes/api/public/hooks/retrain'
 import { Route as ApiPublicHooksDriftScanRouteImport } from './routes/api/public/hooks/drift-scan'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -167,6 +168,11 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksRetrainRoute = ApiPublicHooksRetrainRouteImport.update({
+  id: '/api/public/hooks/retrain',
+  path: '/api/public/hooks/retrain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksDriftScanRoute = ApiPublicHooksDriftScanRouteImport.update({
   id: '/api/public/hooks/drift-scan',
   path: '/api/public/hooks/drift-scan',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/auth/mfa': typeof AuthMfaRoute
   '/auth/role-select': typeof AuthRoleSelectRoute
   '/api/public/hooks/drift-scan': typeof ApiPublicHooksDriftScanRoute
+  '/api/public/hooks/retrain': typeof ApiPublicHooksRetrainRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/auth/mfa': typeof AuthMfaRoute
   '/auth/role-select': typeof AuthRoleSelectRoute
   '/api/public/hooks/drift-scan': typeof ApiPublicHooksDriftScanRoute
+  '/api/public/hooks/retrain': typeof ApiPublicHooksRetrainRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/auth/mfa': typeof AuthMfaRoute
   '/auth/role-select': typeof AuthRoleSelectRoute
   '/api/public/hooks/drift-scan': typeof ApiPublicHooksDriftScanRoute
+  '/api/public/hooks/retrain': typeof ApiPublicHooksRetrainRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/auth/mfa'
     | '/auth/role-select'
     | '/api/public/hooks/drift-scan'
+    | '/api/public/hooks/retrain'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/auth/mfa'
     | '/auth/role-select'
     | '/api/public/hooks/drift-scan'
+    | '/api/public/hooks/retrain'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/auth/mfa'
     | '/auth/role-select'
     | '/api/public/hooks/drift-scan'
+    | '/api/public/hooks/retrain'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -354,6 +366,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiPublicHooksDriftScanRoute: typeof ApiPublicHooksDriftScanRoute
+  ApiPublicHooksRetrainRoute: typeof ApiPublicHooksRetrainRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -541,6 +554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/retrain': {
+      id: '/api/public/hooks/retrain'
+      path: '/api/public/hooks/retrain'
+      fullPath: '/api/public/hooks/retrain'
+      preLoaderRoute: typeof ApiPublicHooksRetrainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/drift-scan': {
       id: '/api/public/hooks/drift-scan'
       path: '/api/public/hooks/drift-scan'
@@ -614,6 +634,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiPublicHooksDriftScanRoute: ApiPublicHooksDriftScanRoute,
+  ApiPublicHooksRetrainRoute: ApiPublicHooksRetrainRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
