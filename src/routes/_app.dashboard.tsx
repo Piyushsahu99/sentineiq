@@ -4,9 +4,8 @@ import { KpiCard } from "@/components/sq/kpi-card";
 import { ProgressRing } from "@/components/sq/progress-ring";
 import { Heatmap } from "@/components/sq/heatmap";
 import { RiskBadge, RiskBar, SeverityDot } from "@/components/sq/risk";
-import { Sparkline } from "@/components/sq/sparkline";
 import {
-  kpis, heatmap, attackCategories, fraudTrend, txStream, riskDistribution,
+  kpis, heatmap, attackCategories, fraudTrend, riskDistribution,
 } from "@/lib/mock/data";
 import { Shield, AlertTriangle, ShieldCheck, Activity, Gauge, Sparkles, Atom, TrendingUp, Ban, FileSearch2, ArrowRight } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -53,7 +52,7 @@ function Dashboard() {
     <div>
       <PageHeader
         title="Executive Security Dashboard"
-        subtitle="Real-time correlation of cyber, fraud, behavioural and quantum signals across the entire bank."
+        subtitle="Correlated cyber, fraud and quantum signals in real time."
         badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">Live</span>}
         actions={
           <>
@@ -63,15 +62,19 @@ function Dashboard() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-6">
-        <KpiCard label="Total Threats" value={(s?.totalTelemetry ?? 0) + (alerts.data?.length ?? 0)} delta={12} icon={<Shield className="h-4 w-4" />} />
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-5">
         <KpiCard label="Critical Alerts" value={s?.criticalAlerts ?? 0} delta={-8} icon={<AlertTriangle className="h-4 w-4" />} accent="var(--risk-critical)" gradient="from-rose-500/20 to-orange-500/20" />
         <KpiCard label="Fraud Prevented" value={s?.fraudPreventedUsd ?? 0} format={(n) => formatCompact(n, prefs)} delta={18} icon={<ShieldCheck className="h-4 w-4" />} accent="var(--risk-low)" gradient="from-emerald-500/20 to-teal-500/20" />
         <KpiCard label="Transactions Monitored" value={s?.transactionsMonitored ?? 0} delta={4} icon={<Activity className="h-4 w-4" />} />
         <KpiCard label="Avg. Risk Score" value={s?.avgRisk ?? 0} unit="/100" delta={-3} icon={<Gauge className="h-4 w-4" />} accent="var(--cyber-violet)" gradient="from-violet-500/20 to-fuchsia-500/20" />
-        <KpiCard label="AI Investigations" value={s?.totalInvestigations ?? 0} delta={7} icon={<Sparkles className="h-4 w-4" />} accent="var(--cyber-cyan)" />
-        <KpiCard label="Quantum Readiness" value={kpis.quantumReadiness} unit="%" delta={2} icon={<Atom className="h-4 w-4" />} accent="var(--cyber-violet)" gradient="from-violet-500/20 to-blue-500/20" />
       </div>
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-5 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-cyan-300" /> AI investigations <span className="font-mono text-foreground">{s?.totalInvestigations ?? 0}</span></span>
+        <span className="inline-flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-blue-300" /> Signals correlated <span className="font-mono text-foreground">{(s?.totalTelemetry ?? 0) + (alerts.data?.length ?? 0)}</span></span>
+        <span className="inline-flex items-center gap-1.5"><Atom className="h-3.5 w-3.5 text-violet-300" /> Quantum readiness <span className="font-mono text-foreground">{kpis.quantumReadiness}%</span></span>
+      </div>
+
 
       <div className="grid grid-cols-12 gap-4">
         <GlassCard className="col-span-12 xl:col-span-8 p-0">
@@ -177,16 +180,12 @@ function Dashboard() {
         </GlassCard>
 
         <GlassCard className="col-span-12 md:col-span-6 xl:col-span-4">
-          <SectionHeader title="Transaction Monitoring" description="Rolling 60-second stream" />
-          <div className="grid grid-cols-3 gap-3">
-            <div><div className="text-[10px] text-muted-foreground uppercase">Approved</div><div className="text-lg font-mono">2,847<span className="text-xs text-muted-foreground">/s</span></div><Sparkline data={txStream.map((s) => s.approved)} color="var(--risk-low)" width={110} height={30} /></div>
-            <div><div className="text-[10px] text-muted-foreground uppercase">Flagged</div><div className="text-lg font-mono">91<span className="text-xs text-muted-foreground">/s</span></div><Sparkline data={txStream.map((s) => s.flagged)} color="var(--risk-medium)" width={110} height={30} /></div>
-            <div><div className="text-[10px] text-muted-foreground uppercase">Blocked</div><div className="text-lg font-mono">14<span className="text-xs text-muted-foreground">/s</span></div><Sparkline data={txStream.map((s) => s.blocked)} color="var(--risk-critical)" width={110} height={30} /></div>
-          </div>
-          <div className="mt-4 flex items-center justify-center">
-            <ProgressRing value={94} size={140} label="Model Health" sublabel="ensemble v2.4.1 · 12 features" />
+          <SectionHeader title="Model Health" description="Hybrid RF + rules ensemble" />
+          <div className="flex items-center justify-center py-2">
+            <ProgressRing value={94} size={132} label="Model Health" sublabel="ensemble v2.4.1" />
           </div>
         </GlassCard>
+
 
         <RecentPanel title="Recent AI Investigations" href="/investigations" items={(invs.data ?? []).slice(0, 6).map((i) => ({
           id: i.id, primary: i.title, secondary: `${i.confidence}% confidence · ${formatMoney(i.business_impact ?? 0, prefs)} impact`, ts: new Date(i.created_at).getTime(), icon: <FileSearch2 className="h-3.5 w-3.5 text-violet-300" />,

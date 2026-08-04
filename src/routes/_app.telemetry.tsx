@@ -56,9 +56,10 @@ function TelemetryPage() {
     <div>
       <PageHeader
         title="Cybersecurity Telemetry"
-        subtitle="Live cyber events streamed from bank ingest, correlated per customer, ready to feed the risk engine."
-        badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">{events.length} events · live</span>}
+        subtitle="Live cyber events feeding the risk engine."
+        badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">{events.length} live</span>}
       />
+
 
       <div className="flex flex-wrap gap-2 mb-6">
         <button onClick={() => setCat(null)} className={`px-3 py-1.5 rounded-lg text-sm hairline ${!cat ? "bg-white/10 border-cyan-400/40" : "bg-white/3 text-muted-foreground hover:text-foreground"}`}>All</button>
@@ -84,12 +85,9 @@ function TelemetryPage() {
         </GlassCard>
 
         <GlassCard className="col-span-12 lg:col-span-8 p-0">
-          <div className="p-4 flex items-center justify-between border-b border-white/6">
-            <div>
-              <div className="text-sm font-semibold">{cat ?? "All"} events</div>
-              <div className="text-[11px] text-muted-foreground">Streamed from ingest · normalised · linked to customers</div>
-            </div>
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> streaming</span>
+          <div className="p-4 flex items-center justify-between border-b border-white/6 gap-3">
+            <div className="text-sm font-semibold truncate">{cat ?? "All"} events</div>
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> streaming</span>
           </div>
           <div className="max-h-[540px] overflow-y-auto scrollbar-thin">
             {filtered.length === 0 ? (
@@ -100,26 +98,18 @@ function TelemetryPage() {
                 )}
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="text-[10px] uppercase tracking-wider text-muted-foreground sticky top-0 bg-card/80 backdrop-blur">
-                  <tr className="[&>th]:text-left [&>th]:font-medium [&>th]:px-4 [&>th]:py-2">
-                    <th>Sev</th><th>Time</th><th>Kind</th><th>Message</th><th>User</th><th>Device</th><th>IP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((e: any) => (
-                    <tr key={e.id} className="border-t border-white/4 hover:bg-white/3">
-                      <td className="px-4 py-2"><RiskBadge severity={(e.severity ?? "info") as Sev} /></td>
-                      <td className="px-4 py-2 text-xs text-muted-foreground">{formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}</td>
-                      <td className="px-4 py-2 text-xs">{e.kind}</td>
-                      <td className="px-4 py-2 text-xs">{e.message}</td>
-                      <td className="px-4 py-2 text-xs font-mono">{e.user_ref ?? "—"}</td>
-                      <td className="px-4 py-2 text-xs font-mono">{e.device ?? "—"}</td>
-                      <td className="px-4 py-2 text-xs font-mono">{e.ip ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ul className="divide-y divide-white/5">
+                {filtered.map((e: any) => (
+                  <li key={e.id} className="px-4 py-2.5 hover:bg-white/3 flex items-start gap-3">
+                    <RiskBadge severity={(e.severity ?? "info") as Sev} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs text-foreground truncate">{e.message}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono truncate">{e.kind} · {e.user_ref ?? "—"} · {e.ip ?? "—"}</div>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{formatDistanceToNow(new Date(e.created_at), { addSuffix: true })}</div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </GlassCard>

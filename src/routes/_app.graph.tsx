@@ -87,7 +87,7 @@ function GraphPage() {
     <div>
       <PageHeader
         title="Knowledge Graph"
-        subtitle="Live entities + correlations written by the engine on every ingest — customers, transactions, devices, IPs, IOCs, signals, investigations."
+        subtitle="Live entities and correlations written on every ingest."
         badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">{nodes.length} nodes · {edges.length} edges</span>}
       />
 

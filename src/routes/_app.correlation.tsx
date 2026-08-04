@@ -42,7 +42,7 @@ function CorrelationPage() {
     <div>
       <PageHeader
         title="Correlation Engine"
-        subtitle="AI fuses cyber telemetry, customer behaviour, threat intel and transactions into one composite decision."
+        subtitle="Cyber, behaviour and transaction signals fused into one decision."
         badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-cyan-500/10 text-cyan-300">AI Core</span>}
       />
 

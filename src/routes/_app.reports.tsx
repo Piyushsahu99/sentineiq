@@ -26,7 +26,7 @@ function ReportsPage() {
     <div>
       <PageHeader
         title="Reports"
-        subtitle="Auto-generated, evidence-linked reports for SOC, Fraud, Compliance, and the board."
+        subtitle="Evidence-linked reports for SOC, fraud and compliance."
         actions={<button onClick={() => toast.success(r.name + " exported as PDF")} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:brightness-110 inline-flex items-center gap-1"><Download className="h-3 w-3" />Download</button>}
       />
 

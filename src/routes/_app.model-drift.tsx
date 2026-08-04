@@ -67,7 +67,7 @@ function DriftPage() {
     <div className="space-y-6">
       <PageHeader
         title="Model Drift Monitor"
-        subtitle="Population Stability Index of live scoring traffic vs. the Random Forest training distribution"
+        subtitle="Live scoring traffic vs. training distribution (PSI)."
       />
 
       <div className="flex flex-wrap items-center gap-2">

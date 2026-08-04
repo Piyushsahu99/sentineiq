@@ -79,7 +79,7 @@ function BehaviorPage() {
     <div>
       <PageHeader
         title="Customer Behaviour Analytics"
-        subtitle="Live behavioural baselines derived from ingested transactions and cyber events. Selecting a customer replays their real activity."
+        subtitle="Behavioural baselines per customer, from live activity."
         badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">{customers.length} customers</span>}
       />
       <div className="grid grid-cols-12 gap-6">
