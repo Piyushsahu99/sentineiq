@@ -56,9 +56,10 @@ function TelemetryPage() {
     <div>
       <PageHeader
         title="Cybersecurity Telemetry"
-        subtitle="Live cyber events streamed from bank ingest, correlated per customer, ready to feed the risk engine."
-        badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">{events.length} events · live</span>}
+        subtitle="Live cyber events feeding the risk engine."
+        badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">{events.length} live</span>}
       />
+
 
       <div className="flex flex-wrap gap-2 mb-6">
         <button onClick={() => setCat(null)} className={`px-3 py-1.5 rounded-lg text-sm hairline ${!cat ? "bg-white/10 border-cyan-400/40" : "bg-white/3 text-muted-foreground hover:text-foreground"}`}>All</button>
