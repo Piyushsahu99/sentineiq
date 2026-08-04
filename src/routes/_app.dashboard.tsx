@@ -63,15 +63,19 @@ function Dashboard() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-6">
-        <KpiCard label="Total Threats" value={(s?.totalTelemetry ?? 0) + (alerts.data?.length ?? 0)} delta={12} icon={<Shield className="h-4 w-4" />} />
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-5">
         <KpiCard label="Critical Alerts" value={s?.criticalAlerts ?? 0} delta={-8} icon={<AlertTriangle className="h-4 w-4" />} accent="var(--risk-critical)" gradient="from-rose-500/20 to-orange-500/20" />
         <KpiCard label="Fraud Prevented" value={s?.fraudPreventedUsd ?? 0} format={(n) => formatCompact(n, prefs)} delta={18} icon={<ShieldCheck className="h-4 w-4" />} accent="var(--risk-low)" gradient="from-emerald-500/20 to-teal-500/20" />
         <KpiCard label="Transactions Monitored" value={s?.transactionsMonitored ?? 0} delta={4} icon={<Activity className="h-4 w-4" />} />
         <KpiCard label="Avg. Risk Score" value={s?.avgRisk ?? 0} unit="/100" delta={-3} icon={<Gauge className="h-4 w-4" />} accent="var(--cyber-violet)" gradient="from-violet-500/20 to-fuchsia-500/20" />
-        <KpiCard label="AI Investigations" value={s?.totalInvestigations ?? 0} delta={7} icon={<Sparkles className="h-4 w-4" />} accent="var(--cyber-cyan)" />
-        <KpiCard label="Quantum Readiness" value={kpis.quantumReadiness} unit="%" delta={2} icon={<Atom className="h-4 w-4" />} accent="var(--cyber-violet)" gradient="from-violet-500/20 to-blue-500/20" />
       </div>
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-5 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-cyan-300" /> AI investigations <span className="font-mono text-foreground">{s?.totalInvestigations ?? 0}</span></span>
+        <span className="inline-flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-blue-300" /> Signals correlated <span className="font-mono text-foreground">{(s?.totalTelemetry ?? 0) + (alerts.data?.length ?? 0)}</span></span>
+        <span className="inline-flex items-center gap-1.5"><Atom className="h-3.5 w-3.5 text-violet-300" /> Quantum readiness <span className="font-mono text-foreground">{kpis.quantumReadiness}%</span></span>
+      </div>
+
 
       <div className="grid grid-cols-12 gap-4">
         <GlassCard className="col-span-12 xl:col-span-8 p-0">
