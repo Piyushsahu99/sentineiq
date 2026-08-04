@@ -87,7 +87,7 @@ function XAIPage() {
     <div>
       <PageHeader
         title="Explainable AI"
-        subtitle="Model-led decisions, fully auditable: Random Forest probability, feature contributions, supporting rule signals, and analyst feedback."
+        subtitle="Auditable model decisions: probability, features, feedback."
         actions={
           <select value={active?.id ?? ""} onChange={(e) => setSelectedId(e.target.value)} className="text-xs bg-white/5 hairline rounded-lg px-3 py-1.5 max-w-[420px]">
             {investigations.map((i) => (<option key={i.id} value={i.id}>{i.title}</option>))}

@@ -52,7 +52,7 @@ function Dashboard() {
     <div>
       <PageHeader
         title="Executive Security Dashboard"
-        subtitle="Real-time correlation of cyber, fraud, behavioural and quantum signals across the entire bank."
+        subtitle="Correlated cyber, fraud and quantum signals in real time."
         badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">Live</span>}
         actions={
           <>

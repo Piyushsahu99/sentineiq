@@ -75,7 +75,7 @@ function TxPage() {
     <div>
       <PageHeader
         title="Transaction Analytics"
-        subtitle="Live transactions from Supabase — insert one below and watch the Correlation Engine score it in real time."
+        subtitle="Live transactions scored by the Correlation Engine."
         actions={
           <div className="flex gap-2">
             <button disabled={seeding} onClick={seedHighRisk} title="Deterministic smoke-test scenario (composite = 89)" className="text-xs px-3 py-1.5 rounded-lg hairline hover:bg-white/6 disabled:opacity-60">

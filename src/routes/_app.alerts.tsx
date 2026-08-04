@@ -74,7 +74,7 @@ function AlertsPage() {
     <div>
       <PageHeader
         title="Alert Center"
-        subtitle="Real-time incident queue backed by Realtime — with ownership, SLAs, and proactive scans."
+        subtitle="Real-time incident queue with ownership and SLAs."
         actions={
           <div className="flex gap-2">
             <button onClick={proactive} className="text-xs px-3 py-1.5 rounded-lg hairline hover:bg-white/6">Run proactive scan</button>

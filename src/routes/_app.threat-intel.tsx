@@ -55,7 +55,7 @@ function ThreatIntelPage() {
     <div>
       <PageHeader
         title="Threat Intelligence"
-        subtitle="Live IOCs + tenant telemetry fused with per-transaction geo distribution. Every ingested tx feeds this view via the knowledge graph."
+        subtitle="Live IOCs fused with transaction geography."
         badge={<span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full hairline bg-emerald-500/10 text-emerald-300">{iocs.length} IOCs · {edges.length} graph edges</span>}
       />
 
