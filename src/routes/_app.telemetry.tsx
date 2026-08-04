@@ -113,9 +113,6 @@ function TelemetryPage() {
             )}
           </div>
         </GlassCard>
-
-          </div>
-        </GlassCard>
       </div>
     </div>
   );
