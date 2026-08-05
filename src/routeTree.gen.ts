@@ -25,6 +25,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuantumRouteImport } from './routes/_app.quantum'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
+import { Route as AppModulesRouteImport } from './routes/_app.modules'
 import { Route as AppModelDriftRouteImport } from './routes/_app.model-drift'
 import { Route as AppInvestigationsRouteImport } from './routes/_app.investigations'
 import { Route as AppIngestRouteImport } from './routes/_app.ingest'
@@ -117,6 +118,11 @@ const AppProfileRoute = AppProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AppRoute,
 } as any)
+const AppModulesRoute = AppModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppModelDriftRoute = AppModelDriftRouteImport.update({
   id: '/model-drift',
   path: '/model-drift',
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/ingest': typeof AppIngestRoute
   '/investigations': typeof AppInvestigationsRoute
   '/model-drift': typeof AppModelDriftRoute
+  '/modules': typeof AppModulesRoute
   '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByTo {
   '/ingest': typeof AppIngestRoute
   '/investigations': typeof AppInvestigationsRoute
   '/model-drift': typeof AppModelDriftRoute
+  '/modules': typeof AppModulesRoute
   '/profile': typeof AppProfileRoute
   '/quantum': typeof AppQuantumRoute
   '/reports': typeof AppReportsRoute
@@ -253,6 +261,7 @@ export interface FileRoutesById {
   '/_app/ingest': typeof AppIngestRoute
   '/_app/investigations': typeof AppInvestigationsRoute
   '/_app/model-drift': typeof AppModelDriftRoute
+  '/_app/modules': typeof AppModulesRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/quantum': typeof AppQuantumRoute
   '/_app/reports': typeof AppReportsRoute
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/ingest'
     | '/investigations'
     | '/model-drift'
+    | '/modules'
     | '/profile'
     | '/quantum'
     | '/reports'
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/ingest'
     | '/investigations'
     | '/model-drift'
+    | '/modules'
     | '/profile'
     | '/quantum'
     | '/reports'
@@ -343,6 +354,7 @@ export interface FileRouteTypes {
     | '/_app/ingest'
     | '/_app/investigations'
     | '/_app/model-drift'
+    | '/_app/modules'
     | '/_app/profile'
     | '/_app/quantum'
     | '/_app/reports'
@@ -484,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProfileRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/modules': {
+      id: '/_app/modules'
+      path: '/modules'
+      fullPath: '/modules'
+      preLoaderRoute: typeof AppModulesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/model-drift': {
       id: '/_app/model-drift'
       path: '/model-drift'
@@ -581,6 +600,7 @@ interface AppRouteChildren {
   AppIngestRoute: typeof AppIngestRoute
   AppInvestigationsRoute: typeof AppInvestigationsRoute
   AppModelDriftRoute: typeof AppModelDriftRoute
+  AppModulesRoute: typeof AppModulesRoute
   AppProfileRoute: typeof AppProfileRoute
   AppQuantumRoute: typeof AppQuantumRoute
   AppReportsRoute: typeof AppReportsRoute
@@ -600,6 +620,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIngestRoute: AppIngestRoute,
   AppInvestigationsRoute: AppInvestigationsRoute,
   AppModelDriftRoute: AppModelDriftRoute,
+  AppModulesRoute: AppModulesRoute,
   AppProfileRoute: AppProfileRoute,
   AppQuantumRoute: AppQuantumRoute,
   AppReportsRoute: AppReportsRoute,

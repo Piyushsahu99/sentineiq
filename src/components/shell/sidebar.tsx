@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, GitBranch, FileSearch2, Coins, Radar, Globe2, Atom, Users, Brain,
-  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield, Upload, Activity,
+  Network, Bell, FileBarChart2, Settings2, ChevronLeft, ChevronRight, Shield, Upload, Activity, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/sq/logo";
@@ -12,6 +12,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 const nav = [
   { section: "Operations", items: [
+    { to: "/modules", label: "Module Hub", icon: LayoutGrid },
     { to: "/dashboard", label: "Executive Dashboard", icon: LayoutDashboard, kbd: "D" },
     { to: "/correlation", label: "Correlation Engine", icon: GitBranch, kbd: "C", badge: "AI" },
     { to: "/investigations", label: "AI Investigations", icon: FileSearch2, kbd: "I" },
