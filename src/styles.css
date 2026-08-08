@@ -65,6 +65,12 @@
 :root {
   --radius: 0.75rem;
 
+  --brand-ink: #0a0a1a;
+  --brand-deep: #141432;
+  --brand-mid: #1e1e5a;
+  --brand-accent: #4f46e5;
+
+
   --background: oklch(0.16 0.02 260);
   --foreground: oklch(0.96 0.01 250);
 
