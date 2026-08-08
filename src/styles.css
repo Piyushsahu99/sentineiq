@@ -52,11 +52,24 @@
   --color-risk-info: var(--risk-info);
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Libre Baskerville", ui-serif, Georgia, serif;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: var(--brand-ink);
+  --color-ink-deep: var(--brand-deep);
+  --color-ink-mid: var(--brand-mid);
+  --color-brand: var(--brand-accent);
 }
+
 
 /* SentinelQ — dark-first enterprise cybersecurity theme */
 :root {
   --radius: 0.75rem;
+
+  --brand-ink: #0a0a1a;
+  --brand-deep: #141432;
+  --brand-mid: #1e1e5a;
+  --brand-accent: #4f46e5;
+
 
   --background: oklch(0.16 0.02 260);
   --foreground: oklch(0.96 0.01 250);
@@ -239,4 +252,46 @@ html {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Landing (Midnight Indigo) ───────────────────────────── */
+@utility bg-vault {
+  background:
+    radial-gradient(900px 520px at 12% -8%, color-mix(in oklab, var(--brand-accent) 26%, transparent), transparent 65%),
+    radial-gradient(760px 520px at 92% 6%, color-mix(in oklab, var(--brand-mid) 70%, transparent), transparent 65%),
+    linear-gradient(180deg, var(--brand-deep) 0%, var(--brand-ink) 55%, var(--brand-ink) 100%);
+}
+
+@utility bg-rule {
+  background-image: linear-gradient(90deg, color-mix(in oklab, white 7%, transparent) 1px, transparent 1px);
+  background-size: 120px 100%;
+}
+
+@utility text-gradient-brand {
+  background: linear-gradient(100deg, #c7d2fe, var(--brand-accent) 55%, #818cf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility panel {
+  background: color-mix(in oklab, var(--brand-deep) 78%, transparent);
+  border: 1px solid color-mix(in oklab, #818cf8 16%, transparent);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 6%, transparent) inset,
+    0 24px 60px -34px #000;
+  backdrop-filter: blur(14px);
+}
+
+@utility panel-hover {
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+  &:hover {
+    border-color: color-mix(in oklab, var(--brand-accent) 55%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--brand-accent) 25%, transparent),
+                0 26px 60px -34px color-mix(in oklab, var(--brand-accent) 60%, transparent);
+  }
+}
+
+@utility rule-top {
+  border-top: 1px solid color-mix(in oklab, #818cf8 14%, transparent);
 }
