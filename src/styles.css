@@ -52,7 +52,14 @@
   --color-risk-info: var(--risk-info);
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Libre Baskerville", ui-serif, Georgia, serif;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: var(--brand-ink);
+  --color-ink-deep: var(--brand-deep);
+  --color-ink-mid: var(--brand-mid);
+  --color-brand: var(--brand-accent);
 }
+
 
 /* SentinelQ — dark-first enterprise cybersecurity theme */
 :root {
